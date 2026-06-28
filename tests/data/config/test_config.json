@@ -1,0 +1,13 @@
+{
+    "sma_calc":{
+        "sma_long":{
+            "window":320,
+            "base":"close_price"
+        },
+        "sma_short":{
+            "window":25,
+            "base":"close_price"
+        }
+    },
+    "":{}
+}

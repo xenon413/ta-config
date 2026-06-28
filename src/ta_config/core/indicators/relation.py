@@ -4,70 +4,20 @@ from typing import Optional
 
 from .base_indicator import BaseIndicator
 
-# Overveiw
-# SMA2SMACrossStandard: complete
-# CrossType: compete
-# CrossVal: missing anchor, stream endpoint
-# CrossValApprox: not implemented
-# TrendType: missing anchor, stream endpoint
-# WindowMin: missing stream endpoint
-# WindowMax: missing stream endpoint
-
-class SMA2SMACrossStandard(BaseIndicator):
-    '''cross standard unit as the base series value'''
-    @staticmethod
-    def vector_endpoint(
-            base_series:pd.Series[float], 
-            sma1:pd.Series[float], window1:int, 
-            sma2:pd.Series[float], window2:int
-        )->pd.Series[float]:
-        
-        # case same window cross every kline
-        if window1 == window2:
-            return base_series.copy()
-        
-        # formula (check equation.pdf for derivation)
-        dx = window1*window2*(sma2-sma1)/(window2-window1)
-        return base_series+dx
-
-    @staticmethod
-    def anchor_endpoint(
-            cur_base: float, 
-            cur_sma1: float, window1: int, 
-            cur_sma2: float, window2: int
-        ) -> float:
-        
-        if window1 == window2:
-            return cur_base
-            
-        dx = (window1 * window2 * (cur_sma2 - cur_sma1)) / (window2 - window1)
-        return cur_base + dx
-
-    @staticmethod
-    def stream_endpoint(
-            cur_base: float, 
-            cur_sma1: float, window1: int, 
-            cur_sma2: float, window2: int
-        ) -> float:
-        
-        return SMA2SMACrossStandard.anchor_endpoint(
-            cur_base, 
-            cur_sma1, window1, 
-            cur_sma2, window2
-        )
-
 class CrossType(BaseIndicator):
-    @staticmethod
+    @classmethod
     def vector_endpoint(
+            cls,
             s1:pd.Series[float], 
             s2:pd.Series[float], 
-            prev_s1:Optional[pd.Series[float]],
-            prev_s2:Optional[pd.Series[float]],
+            prev_s1:pd.Series[float],
+            prev_s2:pd.Series[float],
             upper_bound:Optional[pd.Series[float]], 
-            upper_standard:Optional[pd.Series[float]],
             lower_bound:Optional[pd.Series[float]], 
-            lower_standard:Optional[pd.Series[float]]
-        )->pd.Series[int]:
+            upper_standard:Optional[pd.Series[float]],
+            lower_standard:Optional[pd.Series[float]],
+            name:str
+        )->pd.DataFrame:
 
         # NOTE:
         # the standard and bound must be in the same units, 
@@ -85,13 +35,6 @@ class CrossType(BaseIndicator):
         upper_bound = upper_bound if upper_bound is not None else s1
         lower_bound = lower_bound if lower_bound is not None else s2
 
-        # optional providing previous value
-        # to eliminate duplication on shift calculation
-        if prev_s1 is None:
-            prev_s1 = s1.shift(1)
-        if prev_s2 is None:
-            prev_s2 = s2.shift(1)
-
         # bool series of if cross
         golden_cross = (prev_s1 <= prev_s2) & (upper_bound >= upper_standard)
         death_cross = (prev_s1 > prev_s2) & (lower_bound <= lower_standard)
@@ -104,115 +47,111 @@ class CrossType(BaseIndicator):
         res.loc[golden_cross & death_cross] = 2
 
         # fill the first na caused by shift and return 
-        return res.fillna(0).astype(int)
+        return res.fillna(0).astype(int).to_frame(name)
     
-    @staticmethod
-    def anchor_endpoint(
+    @classmethod
+    def stream_endpoint(
+            cls,
             cur_s1:float, cur_s2:float,
             prev_s1:float, prev_s2:float,
             cur_upper_bound:Optional[float],
             cur_upper_standard:Optional[float],
             cur_lower_bound:Optional[float],
             cur_lower_standard:Optional[float],
-        )->int:
-
+            name:str
+        )->dict[str, int]:
         upper_standard = cur_upper_standard if cur_upper_standard is not None else cur_s2
         lower_standard = cur_lower_standard if cur_lower_standard is not None else cur_s1
         upper_bound = cur_upper_bound if cur_upper_bound is not None else cur_s1
         lower_bound = cur_lower_bound if cur_lower_bound is not None else cur_s2
 
         golden_cross = (prev_s1 <= prev_s2) and (upper_bound >= upper_standard)
-        death_cross = (prev_s1 > prev_s2) and (lower_bound <= lower_standard)
+        death_cross = (prev_s1 >= prev_s2) and (lower_bound <= lower_standard)
 
-        if golden_cross and death_cross:
-            return 2
-        if golden_cross:
-            return 1
-        if death_cross:
-            return -1
-        return 0
+        res = 0
+        res = 1 if golden_cross else res
+        res = -1 if death_cross else res
+        res = 2 if golden_cross and death_cross else res
 
-    @staticmethod
-    def stream_endpoint(
-            cur_s1:float, cur_s2:float,
-            prev_s1:float, prev_s2:float,
-            cur_upper_bound:Optional[float],
-            cur_upper_standard:Optional[float],
-            cur_lower_bound:Optional[float],
-            cur_lower_standard:Optional[float],
-        )->int:
-        return CrossType.anchor_endpoint(
-            cur_s1, cur_s2,
-            prev_s1, prev_s2,
-            cur_upper_bound,
-            cur_upper_standard,
-            cur_lower_bound,
-            cur_lower_standard,
-        )
+        return {name:res}
 
 class CrossVal(BaseIndicator):
-    @staticmethod
+    @classmethod
     def vector_endpoint(
+            cls,
             s1:pd.Series[float], 
             s2:pd.Series[float], 
             base_series:pd.Series[float],
             cross_type:pd.Series[int],
             upper_bound:Optional[pd.Series[float]], 
             lower_bound:Optional[pd.Series[float]], 
-            standard:Optional[pd.Series[float]],
-        )->pd.Series[int]:
+            upper_standard:Optional[pd.Series[float]],
+            lower_standard:Optional[pd.Series[float]],
+            name:str
+        )->pd.DataFrame:
         
         # upper standard usually the same as the lower standard
-        upper_standard = standard if standard is not None else s2
-        lower_standard = standard if standard is not None else s1
+        upper_standard = upper_standard if upper_standard is not None else s2
+        lower_standard = lower_standard if lower_standard is not None else s1
         upper_bound = upper_bound if upper_bound is not None else s1
         lower_bound = lower_bound if lower_bound is not None else s2
 
         # NOTE: for sma the base series usually is open price
+        # when crossed violently it could happen that the whole kline price range is above the standard,
+        # use the base series when it happen and use the standard when normal
         golden_price = np.where(lower_bound > upper_standard, base_series, upper_standard)
         death_price = np.where(upper_bound < lower_standard, base_series, lower_standard)
 
-        # TODO: resolve the missing cross_type == 2
+        # NOTE: when cross_type == 2 there's at least two cross in one kline
+        # we simply ignore that valuees for now
         conditions = [
             (cross_type == 1),
             (cross_type == -1)
         ]
         choices = [golden_price, death_price]
         res = pd.Series(np.select(conditions, choices, default=0))
-        return res
-    
-    @staticmethod
-    def anchor_endpoint():...
+        return res.to_frame(name)
 
-    @staticmethod
-    def stream_endpoint():...
+    @classmethod
+    def stream_endpoint(
+            cls,
+            cur_s1:float,
+            cur_s2:float,
+            cur_base:float,
+            cur_cross_type:int,
+            cur_upper_bound:Optional[float],
+            cur_lower_bound:Optional[float],
+            cur_upper_standard:Optional[float],
+            cur_lower_standard:Optional[float],
+            name:str
+        )->dict[str, float]:
+        
+        cur_upper_standard = cur_upper_standard if cur_upper_standard is not None else cur_s2
+        cur_lower_standard = cur_lower_standard if cur_lower_standard is not None else cur_s1
+        cur_upper_bound = cur_upper_bound if cur_upper_bound is not None else cur_s1
+        cur_lower_bound = cur_lower_bound if cur_lower_bound is not None else cur_s2
 
-class CrossValApprox(BaseIndicator):
-    @staticmethod
-    def vector_endpoint():...
+        # standard_val = (cur_upper_standard + cur_lower_standard)/2
+        golden_price = cur_base if cur_lower_bound > cur_upper_standard else cur_upper_standard
+        death_price = cur_base if cur_upper_bound < cur_lower_standard else cur_lower_standard
 
-    @staticmethod
-    def anchor_endpoint():...
+        res = 0.0
+        res = golden_price if cur_cross_type == 1 else res
+        res = death_price if cur_cross_type == -1 else res
 
-    @staticmethod
-    def stream_endpoint():...
+        return {name:res}
 
 class TrendType(BaseIndicator):
-    @staticmethod
+    @classmethod
     def vector_endpoint(
+            cls,
             upper_bound:pd.Series[float],
             lower_bound:pd.Series[float],
             thresh:float,
             trend_len:int,
-            base_series:Optional[pd.Series[float]],
             prev_base_series:Optional[pd.Series[float]],
-        ):
-
-        if base_series is None and prev_base_series is None:
-            raise ValueError("need to provide base_series or prev_base_series")
-        
-        if prev_base_series is None:
-            prev_base_series = base_series.shift(1)
+            name:str
+        )->pd.DataFrame:
 
         long = upper_bound >= prev_base_series
         short = lower_bound < prev_base_series
@@ -241,50 +180,149 @@ class TrendType(BaseIndicator):
         res = np.where(candidate == trend, trend, 0)
         res = pd.Series(res, index=prev_base_series.index)
 
-        return res
-    
-    @staticmethod
-    def anchor_endpoint():...
+        return res.to_frame(name)
 
-    @staticmethod
-    def stream_endpoint():...        
+    @classmethod
+    def tail(
+            cls,
+            upper_bound:pd.Series[float],
+            lower_bound:pd.Series[float],
+            thresh:float,
+            trend_len:int,
+            prev_base_series:pd.Series[float],
+            name:str
+        )->dict[str, int]:
+
+        # trim everything to trend len
+        upper_bound = upper_bound.tail(trend_len)
+        lower_bound = lower_bound.tail(trend_len)
+        prev_base_series = prev_base_series.tail(trend_len)
+
+        long = upper_bound >= prev_base_series
+        short = lower_bound < prev_base_series
+        flat_upper = (upper_bound - prev_base_series).abs()/prev_base_series
+        flat_lower = (lower_bound - prev_base_series).abs()/prev_base_series
+
+        trend = pd.Series(0, index=prev_base_series.index, dtype="int8")
+        trend[long] = 1
+        trend[short] = -1
+        trend[flat_upper < thresh] = 0
+        trend[flat_lower < thresh] = 0
+
+        if trend_len <= 2:
+            return trend.iloc(-1),  
+
+        tail_sum = trend.tail(trend_len-1).sum()
+
+        res = 0
+        res = 1 if tail_sum == trend_len-1 else res
+        res = -1 if tail_sum == -(trend_len-1) else res
+
+        return {name:res}
+
+    @classmethod
+    def stream_endpoint(
+            cls,
+            upper_bound:pd.Series[float],
+            lower_bound:pd.Series[float],
+            thresh:float,
+            trend_len:int,
+            prev_base_series:pd.Series[float],
+            name:str
+        )->dict[str, int]:
+        # NOTE: use tail endpoint for now 
+        # TODO: write O(1) implementation
+        return cls.tail(upper_bound, lower_bound, thresh, trend_len, prev_base_series, name)
     
 class TrendVal(BaseIndicator):
-    @staticmethod
+    @classmethod
     def vector_endpoint(
-            lower_bound:pd.Series[float],
+            cls,
             upper_bound:pd.Series[float],
-            upper
-        ):
-        pass
+            lower_bound:pd.Series[float],
+            upper_standard:pd.Series[float],
+            lower_standard:pd.Series[float],
+            trend_type:pd.Series[int],
+            base_series:pd.Series[float],
+            name:str
+        )->pd.DataFrame:
+        upper_val = np.where(lower_bound>upper_standard, base_series, upper_standard)
+        upper_val = np.where(upper_bound<upper_standard, 0, upper_val)
+
+        lower_val = np.where(upper_bound<lower_standard, base_series, lower_standard)
+        lower_val = np.where(lower_bound>lower_bound, base_series, lower_val)
+
+        conditions = [
+            (trend_type==1),
+            (trend_type==-1)
+        ]
+        choices = [upper_val, lower_val]
+        res = pd.Series(np.select(conditions, choices, default=0))
+        return res.to_frame(name)
     
-    @staticmethod
-    def anchor_endpoint():...
-    
-    @staticmethod
-    def stream_endpoint():...
+    @classmethod
+    def stream_endpoint(
+            cls,
+            cur_upper_bound:float,
+            cur_lower_bound:float,
+            cur_upper_standard:float,
+            cur_lower_standard:float,
+            cur_trend_type:int,
+            cur_base:float,
+            name:str
+        )->dict[str, float]:
+        upper_val = cur_base if cur_lower_bound>cur_upper_standard else cur_upper_standard
+        upper_val = 0 if cur_upper_bound<cur_upper_standard else upper_val
+
+        lower_val = cur_base if cur_upper_bound<cur_lower_standard else cur_lower_standard
+        lower_val = 0 if cur_lower_bound>cur_lower_standard else lower_val
+
+        res = 0
+        res = upper_val if cur_trend_type == 1 else res
+        res = lower_val if cur_trend_type == -1 else res
+
+        return {name:res} 
     
 class WindowMax(BaseIndicator):
-    @staticmethod
-    def vector_endpoint(base_series:pd.Series[float], window:int)->pd.Series[float]:
-        return base_series.rolling(window).max()
+    @classmethod
+    def vector_endpoint(cls, base_series:pd.Series[float], window:int, name:str="win_max")->pd.DataFrame:
+        return base_series.rolling(window).max().to_frame(name)
         
-    @staticmethod
-    def anchor_endpoint(base_series:pd.Series[float], window:int)->float:
-        return base_series.tail(window).max()
+    @classmethod
+    def tail(cls, base_series:pd.Series[float], window:int, name:str)->dict[str, float]:
+        return {name:base_series.tail(window).max()}
 
-    @staticmethod
-    def stream_endpoint():...
+    @classmethod
+    def stream_endpoint(cls, base_series:pd.Series[float], window:int, name:str)->dict[str, float]:
+        # NOTE: use tail endpoint for now 
+        # TODO: write O(1) implementation
+        return {name:cls.tail(base_series, window)}
         
 class WindowMin(BaseIndicator):
-    @staticmethod
-    def vector_endpoint(base_series:pd.Series[float], window:int):
-        return base_series.rolling(window).min()
+    @classmethod
+    def vector_endpoint(cls, base_series:pd.Series[float], window:int, name:str="win_min")->pd.DataFrame:
+        return base_series.rolling(window).min().to_frame(name)
     
-    @staticmethod
-    def anchor_endpoint(base_series:pd.Series[float], window:int)->float:
-        return base_series.tail(window).min()
+    @classmethod
+    def tail(cls, base_series:pd.Series[float], window:int, name:str)->dict[str, float]:
+        return {name:base_series.tail(window).min()}
     
-    @staticmethod
-    def stream_endpoint():...
+    @classmethod
+    def stream_endpoint(cls, base_series:pd.Series[float], window:int, name:str)->dict[str, float]:
+        # NOTE: use tail endpoint for now 
+        # TODO: write O(1) implementation
+        return cls.tail(base_series, window)
 
+class Shift(BaseIndicator):
+    @classmethod
+    def vector_endpoint(cls, base_series:pd.Series[float], period:int, name:str)->pd.DataFrame:
+        return base_series.shift(period).to_frame(name)
+    
+    @classmethod
+    def tail(cls, base_series:pd.Series[float], period:int, name:str)->dict[str, float]:
+        return {name:base_series.iloc(-(period+1))}
+    
+    @classmethod
+    def stream_endpoint(cls, base_series:pd.Series[float], period:int, name:str)->dict[str, float]:
+        return super().stream_endpoint(base_series, period, name)
+    

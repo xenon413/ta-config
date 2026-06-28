@@ -3,26 +3,25 @@ import pandas as pd
 from .base_indicator import BaseIndicator
 from .ema import EMACalc
 
-# Overveiw
-# MACDCalc: missing anchor, stream endpoint
-
 class MACDCalc(BaseIndicator):
-    @staticmethod
-    def vector_endpoint(base_series:pd.Series[float], fast:int, slow:int, signal:int)->tuple[pd.Series[float], ...]:
-        ema_fast = EMACalc.vector_endpoint(base_series, fast).mean()
-        ema_slow = EMACalc.vector_endpoint(base_series, slow).mean()
-
-        macd_line = ema_fast - ema_slow
-        
-        signal_line = EMACalc.vector_endpoint(macd_line, signal).mean()
-        
+    @classmethod
+    def vector_endpoint(cls, fast_ema:pd.Series[float], slow_ema:pd.Series[float], signal:int, name:str)->pd.DataFrame:
+        macd_line = fast_ema - slow_ema
+        signal_line = EMACalc.vector_endpoint(macd_line, signal, 2, "ema")["ema"]
         macd_hist = macd_line - signal_line
-        
-        return signal_line, macd_line, macd_hist
+        return pd.DataFrame({name:macd_line, f"{name}_signal":signal_line, f"{name}_hist":macd_hist})
 
-    @staticmethod
-    def anchor_endpoint():...
-
-    @staticmethod
-    def stream_endpoint():...
-
+    @classmethod
+    def stream_endpoint(
+            cls,
+            cur_fast_ema:float, 
+            cur_slow_ema:float, 
+            signal:int,
+            prev_signal_line:float,
+            name:str
+        )->dict[str, float]:
+        cur_macd = cur_fast_ema - cur_slow_ema
+        cur_signal = EMACalc.stream_endpoint(prev_signal_line, cur_macd, signal, 2)[0]
+        cur_hist = cur_macd - cur_signal
+        return {name:cur_macd, f"{name}_signal":cur_signal,f"{name}_hist":cur_hist}
+    
