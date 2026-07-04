@@ -14,8 +14,10 @@ def vector_config(base_df:pd.DataFrame, config:dict|IndexConfig)->pd.DataFrame:
     if not isinstance(config, IndexConfig):
         raise ValueError()
 
+    # init
     tasks = {}
     dependencies = {}
+    task_by_output = {}
 
     for index, field in config:
         if index is None or field is None:
@@ -23,16 +25,15 @@ def vector_config(base_df:pd.DataFrame, config:dict|IndexConfig)->pd.DataFrame:
 
         field:dict[str, IndexConfig]
         for field_name, field_config in field.items():
-            indicator_map = getattr(field_config, "indicator_map", {})
-            indicator_cls = next(iter(indicator_map.values())) if indicator_map else None
+            tasks[field_name] = field_config
             
-            if not indicator_cls:
-                continue
-
-            tasks[field_name] = (indicator_cls, field_config)
+            for out_key in field_config.indicator_class.output_keys(field_name):
+                task_by_output[out_key] = field_name
+                
             deps = field_config.dependent()
             dependencies[field_name] = [d for d in deps if d is not None]
 
+    # sort
     sorted_tasks = []
     visited = set()
     temp_visited = set()
@@ -43,8 +44,9 @@ def vector_config(base_df:pd.DataFrame, config:dict|IndexConfig)->pd.DataFrame:
         if node not in visited:
             temp_visited.add(node)
             for dep in dependencies.get(node, []):
-                if dep in tasks:
-                    visit(dep)
+                dep_task = task_by_output.get(dep)
+                if dep_task:
+                    visit(dep_task)
             temp_visited.remove(node)
             visited.add(node)
             sorted_tasks.append(node)
@@ -53,8 +55,10 @@ def vector_config(base_df:pd.DataFrame, config:dict|IndexConfig)->pd.DataFrame:
         if node not in visited:
             visit(node)
 
+    # run task
     for field_name in sorted_tasks:
-        indicator_cls, field_config = tasks[field_name]
+        field_config = tasks[field_name]
+        indicator_cls = field_config.indicator_class
         
         sig = inspect.signature(indicator_cls.vector_endpoint)
         params = sig.parameters
@@ -63,7 +67,7 @@ def vector_config(base_df:pd.DataFrame, config:dict|IndexConfig)->pd.DataFrame:
         config_dict = field_config.model_dump()
         
         for k, v in config_dict.items():
-            if k == "indicator_map" or v is None:
+            if k == "indicator_class" or v is None:
                 continue
                 
             if isinstance(v, str):
@@ -82,11 +86,14 @@ def vector_config(base_df:pd.DataFrame, config:dict|IndexConfig)->pd.DataFrame:
         kwargs["name"] = field_name
         
         res = indicator_cls.vector_endpoint(**kwargs)
+        names = indicator_cls.output_keys(field_name)
+        
         if isinstance(res, pd.Series):
-            base_df[field_name] = res
+            base_df[names[0]] = res
         elif isinstance(res, pd.DataFrame):
-            for col in res.columns:
-                base_df[col] = res[col]
+            for col in names:
+                if col in res.columns:
+                    base_df[col] = res[col]
 
     return base_df
 

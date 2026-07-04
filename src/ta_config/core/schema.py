@@ -1,6 +1,8 @@
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 from abc import ABC, abstractmethod
+from typing import Type
+
 from .indicators import(
     SMACalc, 
     SMA2SMACrossStandard,
@@ -11,6 +13,7 @@ from .indicators import(
     CrossType,
     CrossVal,
     TrendType,
+    TrendVal,
     WindowMax,
     WindowMin,
     Shift,
@@ -23,25 +26,28 @@ class MyBaseModel(BaseModel, ABC):
         populate_by_name=True
     )
 
-    indicator_map:dict = Field(default_factory=dict, exclude=True)
+    indicator_class:Type[BaseIndicator] = Field(
+        default=BaseIndicator,
+        exclude=True
+    )
 
     @abstractmethod
     def dependent(self)->tuple[str]:
         """returns the required field name to exist before executing"""
         pass
 
-    @abstractmethod
-    def generate(self)->tuple[str, ...]:
-        """returns the field name that returns after executing"""
-        pass
+    # @abstractmethod
+    # def generate(self)->tuple[str, ...]:
+    #     """returns the field name that returns after executing"""
+    #     pass
 
 # ---- sma ----
 class SMACalcConfig(MyBaseModel):
     base:str
     window:int
 
-    indicator_map:dict[str, BaseIndicator] = Field(
-        default_factory=lambda: {SMACalc.name:SMACalc},
+    indicator_class:Type[BaseIndicator] = Field(
+        default=SMACalc,
         exclude=True
     )
 
@@ -55,8 +61,8 @@ class SMA2SMACrossStandardConfig(MyBaseModel):
     sma2:str
     window2:int
 
-    indicator_map:dict[str, BaseIndicator] = Field(
-        default_factory=lambda: {SMA2SMACrossStandard.name:SMA2SMACrossStandard},
+    indicator_class:Type[BaseIndicator] = Field(
+        default=SMA2SMACrossStandard,
         exclude=True
     )
 
@@ -66,46 +72,43 @@ class SMA2SMACrossStandardConfig(MyBaseModel):
 class SMATrendMaintValConfig(MyBaseModel):
     base:str
     sma:str
-    prev_sma:Optional[str]=None
+    prev_sma:str
     window:int
 
-    indicator_map:dict[str, BaseIndicator] = Field(
-        default_factory=lambda: {SMATrendMaintVal.name:SMATrendMaintVal},
+    indicator_class:Type[BaseIndicator] = Field(
+        default=SMATrendMaintVal,
         exclude=True
     )
 
-    def dependent(self)->list[str]:
-        res = [self.base]
-        if self.prev_sma is not None:
-            res.append(self.prev_sma)
-        return res
+    def dependent(self)->tuple[str, str, str]:
+        return self.base, self.sma, self.prev_sma
 
 class SMAAdjustConfig(MyBaseModel):
     base:str
     adj:str
     window:int
 
-    indicator_map:dict[str, BaseIndicator] = Field(
-        default_factory=lambda: {SMAadjust.name:SMAadjust},
+    indicator_class:Type[BaseIndicator] = Field(
+        default=SMAadjust,
         exclude=True
     )
 
-    def dependent(self)->list[str]:
-        return [self.base, self.adj]
+    def dependent(self)->tuple[str,str]:
+        return self.base, self.adj
 
 # ---- ema ----
 class EMACalcConfig(MyBaseModel):
     base:str
     window:int
-    smoothing:float
+    smoothing:Optional[float]=None
 
-    indicator_map:dict[str, BaseIndicator] = Field(
-        default_factory=lambda: {EMACalc.name:EMACalc},
+    indicator_class:Type[BaseIndicator] = Field(
+        default=EMACalc,
         exclude=True
     )
 
-    def dependent(self)->list[str]:
-        return [self.base]
+    def dependent(self)->tuple[str]:
+        return self.base,
 
 # ---- macd ----
 class MACDCalcConfig(MyBaseModel):
@@ -113,31 +116,31 @@ class MACDCalcConfig(MyBaseModel):
     slow_ema:str
     signal:int
 
-    indicator_map:dict[str, BaseIndicator] = Field(
-        default_factory=lambda: {MACDCalc.name:MACDCalc},
+    indicator_class:Type[BaseIndicator] = Field(
+        default=MACDCalc,
         exclude=True
     )
 
-    def dependent(self)->list[str]:
-        return [self.fast_ema, self.slow_ema]
+    def dependent(self)->tuple[str,str]:
+        return self.fast_ema, self.slow_ema
 
 # ---- relation ----
 class CrossTypeConfig(MyBaseModel):
     s1:str
     s2:str
-    prev_s1:Optional[str]
-    prev_s2:Optional[str]
-    upper_bound:Optional[str]
-    lower_bound:Optional[str]
-    upper_standard:Optional[str]
-    lower_standard:Optional[str]
+    prev_s1:str
+    prev_s2:str
+    upper_bound:Optional[str]=None
+    lower_bound:Optional[str]=None
+    upper_standard:Optional[str]=None
+    lower_standard:Optional[str]=None
 
-    indicator_map:dict[str, BaseIndicator] = Field(
-        default_factory=lambda: {CrossType.name:CrossType},
+    indicator_class:Type[BaseIndicator] = Field(
+        default=CrossType,
         exclude=True
     )
 
-    def dependent(self)->list[str]:
+    def dependent(self)->tuple[str, ...]:
         res = [self.s1, self.s2]
         if self.prev_s1 is not None:
             res.append(self.prev_s1)
@@ -157,23 +160,24 @@ class CrossTypeConfig(MyBaseModel):
         if self.lower_standard is not None:
             res.append(self.lower_standard)
 
-        return res
+        return tuple(res)
     
 class CrossValConfig(MyBaseModel):
     s1:str
     s2:str
     base:str
     cross_type:str
-    upper_bound:Optional[str]
-    lower_bound:Optional[str]
-    standard:Optional[str]
+    upper_bound:Optional[str]=None
+    lower_bound:Optional[str]=None
+    upper_standard:Optional[str]=None
+    lower_standard:Optional[str]=None
 
-    indicator_map:dict[str, BaseIndicator] = Field(
-        default_factory=lambda: {CrossVal.name:CrossVal},
+    indicator_class:Type[BaseIndicator] = Field(
+        default=CrossVal,
         exclude=True
     )
 
-    def dependent(self)->list[str]:
+    def dependent(self)->tuple[str, ...]:
         res = [self.s1, self.s2, self.base, self.cross_type]
         if self.upper_bound is not None:
             res.append(self.upper_bound)
@@ -181,69 +185,80 @@ class CrossValConfig(MyBaseModel):
         if self.lower_bound is not None:
             res.append(self.lower_bound)
 
-        if self.standard is not None:
-            res.append(self.standard)
+        if self.upper_standard is not None:
+            res.append(self.upper_standard)
 
-        return res
+        if self.lower_standard is not None:
+            res.append(self.lower_standard)
+
+        return tuple(res)
 
 class TrendTypeConfig(MyBaseModel):
     upper_bound:str
     lower_bound:str
     thresh:float
     trend_len:int
-    base:Optional[str]
-    prev_base:Optional[str]
+    prev_base:str
 
-    indicator_map:dict[str, BaseIndicator] = Field(
-        default_factory=lambda: {TrendType.name:TrendType},
+    indicator_class:Type[BaseIndicator] = Field(
+        default=TrendType,
         exclude=True
     )
 
-    def dependent(self)->list[str]:
-        res = [self.upper_bound, self.lower_bound]
-        if self.base is not None:
-            res.append(self.base)
+    def dependent(self)->tuple[str, str, str]:
+        return self.upper_bound, self.lower_bound, self.prev_base
+    
+class TrendValConfig(MyBaseModel):
+    upper_bound:str
+    lower_bound:str
+    upper_standard:str
+    lower_standard:str
+    trend_type:str
+    base:str
 
-        if self.prev_base is not None:
-            res.append(self.prev_base)
+    indicator_class:Type[BaseIndicator] = Field(
+        default=TrendVal,
+        exclude=True
+    )
 
-        return res
+    def dependent(self)->tuple[str, ...]:
+        return self.upper_bound, self.lower_bound, self.upper_standard, self.lower_standard, self.trend_type, self.base
     
 class WindowMaxConfig(MyBaseModel):
     base:str
     window:int
 
-    indicator_map:dict[str, BaseIndicator] = Field(
-        default_factory=lambda: {WindowMax.name:WindowMax},
+    indicator_class:Type[BaseIndicator] = Field(
+        default=WindowMax,
         exclude=True
     )
 
-    def dependent(self)->list[str]:
-        return [self.base]
+    def dependent(self)->tuple[str]:
+        return self.base,
     
 class WindowMinConfig(MyBaseModel):
     base:str
     window:int
 
-    indicator_map:dict[str, BaseIndicator] = Field(
-        default_factory=lambda: {WindowMin.name:WindowMin},
+    indicator_class:Type[BaseIndicator] = Field(
+        default=WindowMin,
         exclude=True
     )
 
-    def dependent(self)->list[str]:
-        return [self.base]
+    def dependent(self)->tuple[str]:
+        return self.base,
     
 class ShiftConfig(MyBaseModel):
     base:str
     period:int
 
-    indicator_map:dict[str, BaseIndicator] = Field(
-        default_factory=lambda: {Shift.name:Shift},
+    indicator_class:Type[BaseIndicator] = Field(
+        default=Shift,
         exclude=True
     )
 
-    def dependent(self)->list[str]:
-        return [self.base]
+    def dependent(self)->tuple[str]:
+        return self.base,
 
 class IndexConfig(MyBaseModel):
     sma_calc:Optional[dict[str, SMACalcConfig]] = None
@@ -255,7 +270,10 @@ class IndexConfig(MyBaseModel):
     cross_type:Optional[dict[str, CrossTypeConfig]] = None
     cross_val:Optional[dict[str, CrossValConfig]] = None
     trend_type:Optional[dict[str, TrendTypeConfig]] = None
+    trend_val:Optional[dict[str, TrendValConfig]] = None
     window_max:Optional[dict[str, WindowMaxConfig]] = None
     window_min:Optional[dict[str, WindowMinConfig]] = None
-    shift:Optional[dict[str, Shift]] = None
+    shift:Optional[dict[str, ShiftConfig]] = None
     
+    def dependent(self)->tuple[str, ...]:...
+

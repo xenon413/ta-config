@@ -1,13 +1,65 @@
 {
-    "sma_calc":{
-        "sma_long":{
-            "window":320,
-            "base":"close_price"
+    "sma_calc": {
+        "sma_short": {
+            "base": "close",
+            "window": 2
         },
-        "sma_short":{
-            "window":25,
-            "base":"close_price"
+        "sma_long": {
+            "base": "close",
+            "window": 3
         }
     },
-    "":{}
+    "ema_calc": {
+        "ema_fast": {
+            "base": "close",
+            "window": 2,
+            "smoothing": 2
+        },
+        "ema_slow": {
+            "base": "close",
+            "window": 3,
+            "smoothing": 2
+        }
+    },
+    "macd_calc": {
+        "macd": {
+            "fast_ema": "ema_fast",
+            "slow_ema": "ema_slow",
+            "signal": 2
+        }
+    },
+    "shift": {
+        "prev_sma_short": {
+            "base": "sma_short",
+            "period": 1
+        },
+        "prev_sma_long": {
+            "base": "sma_long",
+            "period": 1
+        }
+    },
+    "cross_type": {
+        "cross_type": {
+            "s1": "sma_short",
+            "s2": "sma_long",
+            "prev_s1": "prev_sma_short",
+            "prev_s2": "prev_sma_long",
+            "upper_bound": null,
+            "lower_bound": null,
+            "upper_standard": null,
+            "lower_standard": null
+        }
+    },
+    "cross_val": {
+        "cross_val": {
+            "s1": "sma_short",
+            "s2": "sma_long",
+            "base": "open",
+            "cross_type": "cross_type",
+            "upper_bound": null,
+            "lower_bound": null,
+            "upper_standard": null,
+            "lower_standard": null
+        }
+    }
 }

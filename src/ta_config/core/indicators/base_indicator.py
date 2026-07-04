@@ -34,6 +34,15 @@ class BaseIndicator(ABC):
         Unified middleman method that prepares data for stream_endpoint.
         Produces a dictionary that can be directly passed to stream_endpoint.
     """
+    name = "indicator"
+    # (prefix, suffix)
+    output_key_parts = (
+        ("", ""),
+    )
+
+    @classmethod
+    def output_keys(cls, name:str)->tuple[str, ...]:
+        return tuple(f"{prefix}{name}{suffix}" for prefix, suffix in cls.output_key_parts)
 
     @classmethod
     @abstractmethod

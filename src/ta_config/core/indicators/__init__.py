@@ -33,7 +33,7 @@ class SMACalc(_SMACalc):
     @classmethod
     def vector_endpoint(
             cls,
-            base_series:pd.Series[float], 
+            base_series:pd.Series,
             window:int, 
             name:Optional[str]=None
         )->pd.DataFrame:
@@ -49,14 +49,19 @@ class SMACalc(_SMACalc):
             pd.DataFrame: A DataFrame containing the calculated SMA.
         """
         name = name or cls.name
-        return super().vector_endpoint(base_series, window, name)
+        names = cls.output_keys(name)
+        return super().vector_endpoint(
+            base_series=base_series, 
+            window=window, 
+            name=names[0]
+        )
     
     @classmethod
     def stream_endpoint(
             cls,
-            last_sma:float, 
-            oldest_price:float, 
-            new_price:float, 
+            prev_sma:float, 
+            prev_base:float, 
+            cur_base:float, 
             window:int, 
             name:Optional[str]=None
         )->dict[str, float]:
@@ -74,12 +79,19 @@ class SMACalc(_SMACalc):
             dict[str, float]: A dictionary with the computed SMA.
         """
         name = name or cls.name
-        return super().stream_endpoint(last_sma, oldest_price, new_price, window, name)
+        names = cls.output_keys(name)
+        return super().stream_endpoint(
+            prev_sma=prev_sma, 
+            prev_base=prev_base, 
+            cur_base=cur_base, 
+            window=window, 
+            name=names[0]
+        )
 
     @classmethod
     def tail(
             cls, 
-            base_series:pd.Series[float], 
+            base_series:pd.Series, 
             window:int, 
             name:Optional[str]=None
         )->dict[str, float]:
@@ -95,7 +107,12 @@ class SMACalc(_SMACalc):
             dict[str, float]: A dictionary with the computed tail SMA.
         """
         name = name or cls.name
-        return super().tail(base_series, window, name)
+        names = cls.output_keys(name)
+        return super().tail(
+            base_series=base_series, 
+            window=window, 
+            name=names[0]
+        )
     
 class SMA2SMACrossStandard(_SMA2SMACrossStandard):
     """
@@ -107,10 +124,10 @@ class SMA2SMACrossStandard(_SMA2SMACrossStandard):
     @classmethod
     def vector_endpoint(
             cls, 
-            base_series:pd.Series[float], 
-            sma1:pd.Series[float], 
+            base_series:pd.Series,
+            sma1:pd.Series, 
             window1:int, 
-            sma2:pd.Series[float], 
+            sma2:pd.Series, 
             window2:int, 
             name:Optional[str]=None
         )->pd.DataFrame:
@@ -129,7 +146,15 @@ class SMA2SMACrossStandard(_SMA2SMACrossStandard):
             pd.DataFrame: A DataFrame containing the cross standard values.
         """
         name = name or cls.name
-        return super().vector_endpoint(base_series, sma1, window1, sma2, window2, name)
+        names = cls.output_keys(name)
+        return super().vector_endpoint(
+            base_series=base_series,
+            sma1=sma1,
+            window1=window1,
+            sma2=sma2,
+            window2=window2,
+            name=names[0]
+        )
     
     @classmethod
     def stream_endpoint(
@@ -156,7 +181,15 @@ class SMA2SMACrossStandard(_SMA2SMACrossStandard):
             dict[str, float]: A dictionary with the computed cross standard value.
         """
         name = name or cls.name
-        return super().stream_endpoint(cur_base, cur_sma1, window1, cur_sma2, window2, name)
+        names = cls.output_keys(name)
+        return super().stream_endpoint(
+            cur_base=cur_base,
+            cur_sma1=cur_sma1,
+            window1=window1,
+            cur_sma2=cur_sma2,
+            window2=window2,
+            name=names[0]
+        )
     
 class SMATrendMaintVal(_SMATrendMaintVal):
     """
@@ -167,10 +200,10 @@ class SMATrendMaintVal(_SMATrendMaintVal):
     @classmethod
     def vector_endpoint(
             cls, 
-            sma:pd.Series[float], 
+            sma:pd.Series,
+            prev_sma:pd.Series,
             window:int,
-            base_series:pd.Series[float],
-            prev_sma:pd.Series[float],
+            base_series:pd.Series,
             name:Optional[str]=None
         )->pd.DataFrame:
         """
@@ -187,7 +220,14 @@ class SMATrendMaintVal(_SMATrendMaintVal):
             pd.DataFrame: A DataFrame containing the trend maintenance values.
         """
         name = name or cls.name
-        return super().vector_endpoint(sma, window, base_series, prev_sma, name)
+        names = cls.output_keys(name)
+        return super().vector_endpoint(
+            sma=sma,
+            window=window,
+            base_series=base_series,
+            prev_sma=prev_sma,
+            name=names[0]
+        )
 
     @classmethod
     def stream_endpoint(
@@ -212,7 +252,14 @@ class SMATrendMaintVal(_SMATrendMaintVal):
             dict[str, float]: A dictionary with the computed trend maintenance value.
         """
         name = name or cls.name
-        return super().stream_endpoint(cur_base, cur_sma, prev_sma, window, name)
+        names = cls.output_keys(name)
+        return super().stream_endpoint(
+            cur_base=cur_base,
+            cur_sma=cur_sma,
+            prev_sma=prev_sma,
+            window=window,
+            name=names[0]
+        )
 
 class SMAadjust(_SMAadjust):
     """
@@ -223,8 +270,8 @@ class SMAadjust(_SMAadjust):
     @classmethod
     def vector_endpoint(
             cls, 
-            base_series:pd.Series[float],
-            adj_series:pd.Series[float],
+            base_series:pd.Series,
+            adj_series:pd.Series,
             window:int,
             name:Optional[str]=None
         )->pd.DataFrame:
@@ -242,7 +289,13 @@ class SMAadjust(_SMAadjust):
         """
 
         name = name or cls.name
-        return super().vector_endpoint(base_series, adj_series, window, name)
+        names = cls.output_keys(name)
+        return super().vector_endpoint(
+            base_series=base_series,
+            adj_series=adj_series,
+            window=window,
+            name=names[0]
+        )
 
     @classmethod
     def stream_endpoint(
@@ -265,7 +318,13 @@ class SMAadjust(_SMAadjust):
             dict[str, float]: A dictionary with the computed adjusted SMA.
         """
         name = name or cls.name
-        return super().stream_endpoint(cur_base, cur_adj, window, name)
+        names = cls.output_keys(name)
+        return super().stream_endpoint(
+            cur_base=cur_base,
+            cur_adj=cur_adj,
+            window=window,
+            name=names[0]
+        )
     
 # ---- from .ema ----
 class EMACalc(_EMACalc):
@@ -277,9 +336,9 @@ class EMACalc(_EMACalc):
     @classmethod
     def vector_endpoint(
             cls, 
-            base_series:pd.Series[float], 
+            base_series:pd.Series, 
             window:int, 
-            smoothing:float=2, 
+            smoothing:Optional[float]=None,
             name:Optional[str]=None
         )->pd.Series:
         """
@@ -294,8 +353,15 @@ class EMACalc(_EMACalc):
         Returns:
             pd.Series: A Series containing the calculated EMA.
         """
+        smoothing = smoothing or 2
         name = name or cls.name
-        return super().vector_endpoint(base_series, window, smoothing, name)
+        names = cls.output_keys(name)
+        return super().vector_endpoint(
+            base_series=base_series,
+            window=window,
+            smoothing=smoothing,
+            name=names[0]
+        )
     
     @classmethod
     def stream_endpoint(
@@ -303,7 +369,7 @@ class EMACalc(_EMACalc):
             prev_ema:float, 
             cur_base:float, 
             window:int, 
-            smoothing:float=2, 
+            smoothing:Optional[float]=None, 
             name:Optional[str]=None
         )->dict[str, float]:
         """
@@ -319,8 +385,16 @@ class EMACalc(_EMACalc):
         Returns:
             dict[str, float]: A dictionary with the computed EMA.
         """
+        smoothing = smoothing or 2
         name = name or cls.name
-        return super().stream_endpoint(prev_ema, cur_base, window, smoothing, name)
+        names = cls.output_keys(name)
+        return super().stream_endpoint(
+            prev_ema=prev_ema,
+            cur_base=cur_base,
+            window=window,
+            smoothing=smoothing,
+            name=names[0]
+        )
     
 class MACDCalc(_MACDCalc):
     """
@@ -328,11 +402,16 @@ class MACDCalc(_MACDCalc):
     """
 
     name = "macd_calc"
+    output_key_parts= (
+        ("", ""),
+        ("", "_signal"),
+        ("", "_hist")
+    )
     @classmethod
     def vector_endpoint(
             cls, 
-            fast_ema:pd.Series[float], 
-            slow_ema:pd.Series[float], 
+            fast_ema:pd.Series, 
+            slow_ema:pd.Series, 
             signal:int,
             name:Optional[str]=None
         )->pd.DataFrame:
@@ -349,7 +428,15 @@ class MACDCalc(_MACDCalc):
             pd.DataFrame: A DataFrame containing the MACD line, signal line, and histogram.
         """
         name = name or cls.name
-        return super().vector_endpoint(fast_ema, slow_ema, signal, name)
+        names = cls.output_keys(name)
+        return super().vector_endpoint(
+            fast_ema=fast_ema,
+            slow_ema=slow_ema,
+            signal=signal,
+            name=names[0],
+            signal_name=names[1],
+            hist_name=names[2]
+        )
 
     @classmethod
     def stream_endpoint(
@@ -374,7 +461,16 @@ class MACDCalc(_MACDCalc):
             dict[str, float]: A dictionary with the computed MACD line, signal line, and histogram.
         """
         name = name or cls.name
-        return super().stream_endpoint(cur_fast_ema, cur_slow_ema, signal, prev_signal_line, name)
+        names = cls.output_keys(name)
+        return super().stream_endpoint(
+            cur_fast_ema=cur_fast_ema,
+            cur_slow_ema=cur_slow_ema,
+            signal=signal,
+            prev_signal_line=prev_signal_line,
+            name=names[0],
+            signal_name=names[1],
+            hist_name=names[2]
+        )
 
 # ---- from .relation ----
 class CrossType(_CrossType):
@@ -387,14 +483,14 @@ class CrossType(_CrossType):
     @classmethod
     def vector_endpoint(
             cls, 
-            s1:pd.Series[float], 
-            s2:pd.Series[float], 
-            prev_s1:pd.Series[float], 
-            prev_s2:pd.Series[float],
-            upper_bound:Optional[pd.Series[float]]=None,
-            lower_bound:Optional[pd.Series[float]]=None, 
-            upper_standard:Optional[pd.Series[float]]=None, 
-            lower_standard:Optional[pd.Series[float]]=None,
+            s1:pd.Series, 
+            s2:pd.Series, 
+            prev_s1:pd.Series, 
+            prev_s2:pd.Series,
+            upper_bound:Optional[pd.Series]=None,
+            lower_bound:Optional[pd.Series]=None, 
+            upper_standard:Optional[pd.Series]=None, 
+            lower_standard:Optional[pd.Series]=None,
             name:Optional[str]=None
         )->pd.DataFrame:
         """
@@ -415,7 +511,18 @@ class CrossType(_CrossType):
             pd.DataFrame: A DataFrame containing the integer cross type identifiers.
         """
         name = name or cls.name
-        return super().vector_endpoint(s1, s2, prev_s1, prev_s2, upper_bound, lower_bound, upper_standard, lower_standard, name)
+        names = cls.output_keys(name)
+        return super().vector_endpoint(
+            s1=s1,
+            s2=s2,
+            prev_s1=prev_s1,
+            prev_s2=prev_s2,
+            upper_bound=upper_bound,
+            lower_bound=lower_bound,
+            upper_standard=upper_standard,
+            lower_standard=lower_standard,
+            name=names[0]
+        )
     
     @classmethod
     def stream_endpoint(
@@ -448,7 +555,18 @@ class CrossType(_CrossType):
             dict[str, int]: A dictionary with the computed cross type (1, -1, 2, or 0).
         """
         name = name or cls.name
-        return super().stream_endpoint(cur_s1, cur_s2, prev_s1, prev_s2, cur_upper_bound, cur_upper_standard, cur_lower_bound, cur_lower_standard, name)
+        names = cls.output_keys(name)
+        return super().stream_endpoint(
+            cur_s1=cur_s1,
+            cur_s2=cur_s2,
+            prev_s1=prev_s1,
+            prev_s2=prev_s2,
+            cur_upper_bound=cur_upper_bound,
+            cur_upper_standard=cur_upper_standard,
+            cur_lower_bound=cur_lower_bound,
+            cur_lower_standard=cur_lower_standard,
+            name=names[0]
+        )
 
 class CrossVal(_CrossVal):
     """
@@ -459,14 +577,14 @@ class CrossVal(_CrossVal):
     @classmethod
     def vector_endpoint(
             cls, 
-            s1:pd.Series[float], 
-            s2:pd.Series[float],
-            base_series:pd.Series[float],
-            cross_type:pd.Series[int],
-            upper_bound:Optional[pd.Series[float]]=None,
-            lower_bound:Optional[pd.Series[float]]=None, 
-            upper_standard:Optional[pd.Series[float]]=None, 
-            lower_standard:Optional[pd.Series[float]]=None, 
+            s1:pd.Series, 
+            s2:pd.Series,
+            base_series:pd.Series,
+            cross_type:pd.Series,
+            upper_bound:Optional[pd.Series]=None,
+            lower_bound:Optional[pd.Series]=None, 
+            upper_standard:Optional[pd.Series]=None, 
+            lower_standard:Optional[pd.Series]=None, 
             name:Optional[str]=None
         )->pd.DataFrame:
         """
@@ -487,7 +605,18 @@ class CrossVal(_CrossVal):
             pd.DataFrame: A DataFrame containing the cross values.
         """
         name = name or cls.name
-        return super().vector_endpoint(s1, s2, base_series, cross_type, upper_bound, lower_bound, upper_standard, lower_standard, name)
+        names = cls.output_keys(name)
+        return super().vector_endpoint(
+            s1=s1,
+            s2=s2,
+            base_series=base_series,
+            cross_type=cross_type,
+            upper_bound=upper_bound,
+            lower_bound=lower_bound,
+            upper_standard=upper_standard,
+            lower_standard=lower_standard,
+            name=names[0]
+        )
     
     @classmethod
     def stream_endpoint(
@@ -520,7 +649,18 @@ class CrossVal(_CrossVal):
             dict[str, float]: A dictionary with the computed cross value.
         """
         name = name or cls.name
-        return super().stream_endpoint(cur_s1, cur_s2, cur_base, cur_cross_type, cur_upper_bound, cur_lower_bound, cur_upper_standard, cur_lower_standard, name)
+        names = cls.output_keys(name)
+        return super().stream_endpoint(
+            cur_s1=cur_s1,
+            cur_s2=cur_s2,
+            cur_base=cur_base,
+            cur_cross_type=cur_cross_type,
+            cur_upper_bound=cur_upper_bound,
+            cur_lower_bound=cur_lower_bound,
+            cur_upper_standard=cur_upper_standard,
+            cur_lower_standard=cur_lower_standard,
+            name=names[0]
+        )
 
 class TrendType(_TrendType):
     """
@@ -532,11 +672,11 @@ class TrendType(_TrendType):
     @classmethod
     def vector_endpoint(
             cls, 
-            upper_bound:pd.Series[float], 
-            lower_bound:pd.Series[float], 
+            prev_base_series:pd.Series,
+            upper_bound:pd.Series,
+            lower_bound:pd.Series, 
             thresh:float, 
             trend_len:int,
-            prev_base_series:pd.Series[float], 
             name:Optional[str]=None
         )->pd.DataFrame:
         """
@@ -554,16 +694,24 @@ class TrendType(_TrendType):
             pd.DataFrame: A DataFrame containing the integer trend type identifiers.
         """
         name = name or cls.name
-        return super().vector_endpoint(upper_bound, lower_bound, thresh, trend_len, prev_base_series, name)
+        names = cls.output_keys(name)
+        return super().vector_endpoint(
+            upper_bound=upper_bound,
+            lower_bound=lower_bound,
+            thresh=thresh,
+            trend_len=trend_len,
+            prev_base_series=prev_base_series,
+            name=names[0]
+        )
     
     @classmethod
     def stream_endpoint(
         cls, 
-        upper_bound:pd.Series[float], 
-        lower_bound:pd.Series[float],
+        upper_bound:pd.Series,
+        lower_bound:pd.Series,
         thresh:float,
         trend_len:int,
-        prev_base_series:pd.Series[float], 
+        prev_base_series:pd.Series, 
         name:Optional[str]=None
         )->dict[str, int]:
         """
@@ -581,7 +729,15 @@ class TrendType(_TrendType):
             dict[str, int]: A dictionary with the computed trend type.
         """
         name = name or cls.name
-        return super().stream_endpoint(upper_bound, lower_bound, thresh, trend_len, prev_base_series, name)
+        names = cls.output_keys(name)
+        return super().stream_endpoint(
+            upper_bound=upper_bound,
+            lower_bound=lower_bound,
+            thresh=thresh,
+            trend_len=trend_len,
+            prev_base_series=prev_base_series,
+            name=names[0]
+        )
 
 class TrendVal(_TrendVal):
     """
@@ -592,12 +748,12 @@ class TrendVal(_TrendVal):
     @classmethod
     def vector_endpoint(
             cls, 
-            upper_bound:pd.Series[float],
-            lower_bound:pd.Series[float],
-            upper_standard:pd.Series[float],
-            lower_standard:pd.Series[float],
-            trend_type:pd.Series[int],
-            base_series:pd.Series[float],
+            upper_bound:pd.Series,
+            lower_bound:pd.Series,
+            upper_standard:pd.Series,
+            lower_standard:pd.Series,
+            trend_type:pd.Series,
+            base_series:pd.Series,
             name:Optional[str]=None
         )->pd.DataFrame:
         """
@@ -616,7 +772,16 @@ class TrendVal(_TrendVal):
             pd.DataFrame: A DataFrame containing the trend values.
         """
         name = name or cls.name
-        return super().vector_endpoint(upper_bound, lower_bound, upper_standard, lower_standard, trend_type, base_series, name)
+        names = cls.output_keys(name)
+        return super().vector_endpoint(
+            upper_bound=upper_bound,
+            lower_bound=lower_bound,
+            upper_standard=upper_standard,
+            lower_standard=lower_standard,
+            trend_type=trend_type,
+            base_series=base_series,
+            name=names[0]
+        )
 
     @classmethod
     def stream_endpoint(
@@ -644,8 +809,17 @@ class TrendVal(_TrendVal):
         Returns:
             dict[str, float]: A dictionary with the computed trend value.
         """
-        name:Optional[str]=None
-        return super().stream_endpoint(cur_upper_bound, cur_lower_bound, cur_upper_standard, cur_lower_standard, cur_trend_type, cur_base, name)
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().stream_endpoint(
+            cur_upper_bound=cur_upper_bound,
+            cur_lower_bound=cur_lower_bound,
+            cur_upper_standard=cur_upper_standard,
+            cur_lower_standard=cur_lower_standard,
+            cur_trend_type=cur_trend_type,
+            cur_base=cur_base,
+            name=names[0]
+        )
 
 class WindowMax(_WindowMax):
     """
@@ -656,7 +830,7 @@ class WindowMax(_WindowMax):
     @classmethod
     def vector_endpoint(
             cls, 
-            base_series:pd.Series[float], 
+            base_series:pd.Series, 
             window:int,
             name:Optional[str]=None
         )->pd.DataFrame:
@@ -672,12 +846,17 @@ class WindowMax(_WindowMax):
             pd.DataFrame: A DataFrame containing the rolling maximum.
         """
         name = name or cls.name
-        return super().vector_endpoint(base_series, window, name)
+        names = cls.output_keys(name)
+        return super().vector_endpoint(
+            base_series=base_series, 
+            window=window, 
+            name=names[0]
+        )
     
     @classmethod
     def stream_endpoint(
             cls, 
-            base_series:pd.Series[float], 
+            base_series:pd.Series, 
             window:int,
             name:Optional[str]=None
         )->dict[str, float]:
@@ -693,12 +872,17 @@ class WindowMax(_WindowMax):
             dict[str, float]: A dictionary with the computed rolling maximum.
         """
         name = name or cls.name
-        return super().stream_endpoint(base_series, window, name)
+        names = cls.output_keys(name)
+        return super().stream_endpoint(
+            base_series=base_series,
+            window=window,
+            name=names[0]
+        )
 
     @classmethod
     def tail(
             cls, 
-            base_series:pd.Series[float], 
+            base_series:pd.Series, 
             window:int,
             name:Optional[str]=None
         )->dict[str, float]:
@@ -714,7 +898,12 @@ class WindowMax(_WindowMax):
             dict[str, float]: A dictionary with the computed tail rolling maximum.
         """
         name = name or cls.name
-        return super().tail(base_series, window, name)
+        names = cls.output_keys(name)
+        return super().tail(
+            base_series=base_series,
+            window=window,
+            name=names[0]
+        )
     
 class WindowMin(_WindowMin):
     """
@@ -725,7 +914,7 @@ class WindowMin(_WindowMin):
     @classmethod
     def vector_endpoint(
             cls,
-            base_series:pd.Series[float],
+            base_series:pd.Series,
             window:int,
             name:Optional[str]=None
         )->pd.DataFrame:
@@ -741,12 +930,17 @@ class WindowMin(_WindowMin):
             pd.DataFrame: A DataFrame containing the rolling minimum.
         """
         name = name or cls.name
-        return super().vector_endpoint(base_series, window, name)
+        names = cls.output_keys(name)
+        return super().vector_endpoint(
+            base_series=base_series,
+            window=window,
+            name=names[0]
+        )
     
     @classmethod
     def stream_endpoint(
             cls,
-            base_series:pd.Series[float],
+            base_series:pd.Series,
             window:int,
             name:Optional[str]=None
         )->dict[str, float]:
@@ -762,12 +956,17 @@ class WindowMin(_WindowMin):
             dict[str, float]: A dictionary with the computed rolling minimum.
         """
         name = name or cls.name
-        return super().stream_endpoint(base_series, window, name)
+        names = cls.output_keys(name)
+        return super().stream_endpoint(
+            base_series=base_series,
+            window=window,
+            name=names[0]
+        )
 
     @classmethod
     def tail(
             cls, 
-            base_series:pd.Series[float], 
+            base_series:pd.Series, 
             window:int, 
             name:Optional[str]=None
         )->dict[str, float]:
@@ -783,7 +982,12 @@ class WindowMin(_WindowMin):
             dict[str, float]: A dictionary with the computed tail rolling minimum.
         """
         name = name or cls.name
-        return super().tail(base_series, window, name)
+        names = cls.output_keys(name)
+        return super().tail(
+            base_series=base_series,
+            window=window,
+            name=names[0]
+        )
     
 class Shift(_Shift):
     """
@@ -794,7 +998,7 @@ class Shift(_Shift):
     @classmethod
     def vector_endpoint(
             cls, 
-            base_series:pd.Series[float], 
+            base_series:pd.Series, 
             period:int,
             name:Optional[str]=None
         )->pd.DataFrame:
@@ -810,12 +1014,17 @@ class Shift(_Shift):
             pd.DataFrame: A DataFrame containing the shifted series.
         """
         name = name or cls.name
-        return super().vector_endpoint(base_series, period, name)
+        names = cls.output_keys(name)
+        return super().vector_endpoint(
+            base_series=base_series,
+            period=period,
+            name=names[0]
+        )
     
     @classmethod
     def stream_endpoint(
             cls, 
-            base_series:pd.Series[float], 
+            base_series:pd.Series, 
             period:int,
             name:Optional[str]=None
         )->dict[str, float]:
@@ -831,12 +1040,17 @@ class Shift(_Shift):
             dict[str, float]: A dictionary with the shifted value.
         """
         name = name or cls.name
-        return super().stream_endpoint(base_series, period, name)
+        names = cls.output_keys(name)
+        return super().stream_endpoint(
+            base_series=base_series,
+            period=period,
+            name=names[0]
+        )
 
     @classmethod
     def tail(
             cls, 
-            base_series:pd.Series[float],
+            base_series:pd.Series,
             period:int,
             name:Optional[str]=None
         )->dict[str, float]:
@@ -852,7 +1066,12 @@ class Shift(_Shift):
             dict[str, float]: A dictionary with the computed tail shifted value.
         """
         name = name or cls.name
-        return super().tail(base_series, period, name)
+        names = cls.output_keys(name)
+        return super().tail(
+            base_series=base_series,
+            period=period,
+            name=names[0]
+        )
         
 __all__ = [
     "SMACalc",

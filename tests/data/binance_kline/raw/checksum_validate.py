@@ -1,7 +1,7 @@
 import hashlib
 
-TARGET = r"tests\data\raw\BTCUSDC-1m-2026-06-13.zip"
-CHECKSUM = r"tests\data\raw\BTCUSDC-1m-2026-06-13.zip.CHECKSUM"
+TARGET = r"tests\data\binance_kline\raw\BTCUSDC-1m-2026-06-12.zip"
+CHECKSUM = r"tests\data\binance_kline\raw\BTCUSDC-1m-2026-06-12.zip.CHECKSUM"
 
 # generator for reading data
 def read_file_chunks(file_path, chunk_size=4096):
