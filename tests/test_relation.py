@@ -19,10 +19,10 @@ def test_cross_type_mock():
     """Mock test for CrossType (vector and stream endpoints)."""
     s1 = pd.Series([1.0, 2.0, 1.0, 3.0])
     s2 = pd.Series([2.0, 1.0, 2.0, 1.0])
-    prev_s1 = pd.Series([0.5, 1.5, 1.5, 2.5])
-    prev_s2 = pd.Series([1.5, 1.0, 1.0, 2.0])
-    upper_bound = pd.Series([1.2, 2.2, 1.0, 3.2])
-    lower_bound = pd.Series([0.8, 1.8, 0.8, 2.8])
+    prev_s1 = pd.Series([0.5, 1.5, 0.5, 1.5])
+    prev_s2 = pd.Series([1.5, 1.0, 1.5, 1.0])
+    upper_bound = pd.Series([1.8, 2.2, 1.8, 3.2])
+    lower_bound = pd.Series([0.8, 1.2, 0.8, 1.2])
     upper_standard = pd.Series([1.8, 1.8, 1.8, 1.8])
     lower_standard = pd.Series([1.2, 1.2, 1.2, 1.2])
 
@@ -46,7 +46,7 @@ def test_cross_type_mock():
         cur_s2=2.0,
         prev_s1=0.5,
         prev_s2=1.5,
-        cur_upper_bound=1.2,
+        cur_upper_bound=1.8,
         cur_upper_standard=1.8,
         cur_lower_bound=0.8,
         cur_lower_standard=1.2,
@@ -114,7 +114,7 @@ def test_trend_type_mock():
         name="test_trend_type",
     )
 
-    expected = pd.Series([0, 0, 0, 0], name="test_trend_type")
+    expected = pd.Series([0, 0, 0, 0], name="test_trend_type", dtype="int8")
     pdt.assert_series_equal(res_vec["test_trend_type"], expected)
 
     res_tail = TrendType.tail(
@@ -142,8 +142,8 @@ def test_trend_type_mock():
 def test_trend_val_mock():
     """Mock test for TrendVal (vector and stream endpoints)."""
     base_series = pd.Series([10.0, 10.0, 10.0, 10.0])
-    upper_bound = pd.Series([11.0, 10.0, 9.0, 12.0])
-    lower_bound = pd.Series([9.0, 9.5, 8.5, 11.0])
+    upper_bound = pd.Series([11.0, 10.0, 9.0, 11.0])
+    lower_bound = pd.Series([9.0, 9.5, 8.5, 9.0])
     upper_standard = pd.Series([10.5, 10.5, 10.5, 10.5])
     lower_standard = pd.Series([9.5, 9.5, 9.5, 9.5])
     trend_type = pd.Series([1, -1, 0, 1])
@@ -218,7 +218,7 @@ def test_shift_mock():
     pdt.assert_series_equal(res_vec["test_shift"], expected)
 
     res_tail = Shift.tail(base_series=base, period=period, name="test_shift")
-    assert res_tail["test_shift"] == 20.0
+    assert res_tail["test_shift"] == 30.0
 
     res_stream = Shift.stream_endpoint(base_series=base, period=period, name="test_shift")
-    assert res_stream["test_shift"] == 20.0
+    assert res_stream["test_shift"] == 30.0

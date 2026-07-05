@@ -27,7 +27,7 @@ def test_macd_calc_mock():
         smoothing=2,
         name=f"{name}_signal",
     )[f"{name}_signal"]
-    expected_hist = expected_macd - expected_signal
+    expected_hist = (expected_macd - expected_signal).rename(f"{name}_hist")
 
     pdt.assert_series_equal(res_vec[name], expected_macd)
     pdt.assert_series_equal(res_vec[f"{name}_signal"], expected_signal)

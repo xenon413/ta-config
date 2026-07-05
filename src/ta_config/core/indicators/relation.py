@@ -305,7 +305,7 @@ class WindowMax(BaseIndicator):
         # NOTE: use tail endpoint for now 
         # TODO: write O(1) implementation
         base_series:pd.Series[float]
-        return {name:cls.tail(base_series, window)}
+        return cls.tail(base_series, window, name)
         
 class WindowMin(BaseIndicator):
     @classmethod
@@ -334,10 +334,10 @@ class Shift(BaseIndicator):
     @classmethod
     def tail(cls, base_series:pd.Series, period:int, name:str)->dict[str, float]:
         base_series:pd.Series[float]
-        return {name:base_series.iloc(-(period+1))}
+        return {name:base_series.iloc[-(period+1)]}
     
     @classmethod
     def stream_endpoint(cls, base_series:pd.Series, period:int, name:str)->dict[str, float]:
         base_series:pd.Series[float]
-        return super().stream_endpoint(base_series, period, name)
+        return cls.tail(base_series, period, name)
     

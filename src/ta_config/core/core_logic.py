@@ -7,6 +7,7 @@ from .constants import CandleInterval
 from .schema import IndexConfig
 
 # using Topological Sort
+# TODO: also returns the order, seperate ordering and config
 def vector_config(base_df:pd.DataFrame, config:dict|IndexConfig)->pd.DataFrame:
     if isinstance(config, dict):
         config = IndexConfig.model_validate(config)
@@ -20,7 +21,7 @@ def vector_config(base_df:pd.DataFrame, config:dict|IndexConfig)->pd.DataFrame:
     task_by_output = {}
 
     for index, field in config:
-        if index is None or field is None:
+        if index == "indicator_class" or index is None or field is None:
             continue
 
         field:dict[str, IndexConfig]
@@ -99,9 +100,23 @@ def vector_config(base_df:pd.DataFrame, config:dict|IndexConfig)->pd.DataFrame:
 
 
 class StreamHandle:
-    def __init__(self):
-        pass
+    def __init__(self,base_df:pd.DataFrame, config:dict|IndexConfig):
+        if isinstance(config, dict):
+            config = IndexConfig.model_validate(config)
 
+        if not isinstance(config, IndexConfig):
+            raise ValueError()
+        
+        self.config:IndexConfig = config
+        self.prev_df:pd.DataFrame = vector_config(base_df, config)
+
+    def update(self, row:dict)->dict:
+        cur_df = pd.concat([self.prev_df, pd.DataFrame(row)], ignore_index=True)
+        # use cur_df, prev_df, row, to config new row
+        new_row = {}
+        
+        self.prev_df = cur_df
+        return new_row
 
 # abandoned
 class SignalHandle:
