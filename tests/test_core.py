@@ -5,7 +5,6 @@ import pandas as pd
 import pandas.testing as pdt
 import pytest
 
-from ta_config.core.core_logic import vector_config
 from ta_config.core.schema import IndexConfig
 from ta_config.core.indicators import SMACalc, Shift, CrossType, CrossVal, EMACalc, MACDCalc
 
@@ -32,8 +31,8 @@ def index_config():
 
 
 @pytest.mark.unit
-def test_vector_config_with_dependency_chain(base_df, index_config):
-    res = vector_config(base_df.copy(), index_config)
+def test_vector_config_with_dependency_chain(base_df:pd.DataFrame, index_config:IndexConfig):
+    res = index_config.config(base_df)
 
     expected_columns = {
         "sma_short",

@@ -4,7 +4,6 @@ from typing import Optional
 from .base_indicator import BaseIndicator
 
 class SMACalc(BaseIndicator):
-    
     @classmethod
     def vector_endpoint(
             cls,
@@ -33,6 +32,11 @@ class SMACalc(BaseIndicator):
         name:str
     )->dict[str, float]:
         return {name:base_series.tail(window).mean()}
+    
+    @classmethod
+    def stream_handler(cls, pre_df:pd.DataFrame, cur_row:dict, window:int, name:str, **kwargs)->dict[str, float]:
+        return cls.stream_endpoint()
+        
     
 class SMA2SMACrossStandard(BaseIndicator):
     @classmethod

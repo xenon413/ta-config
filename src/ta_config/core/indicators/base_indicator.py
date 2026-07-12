@@ -56,9 +56,12 @@ class BaseIndicator(ABC):
         """Compute the next step metric using low-latency O(1) recursive or scalar math."""
         pass
 
+    # NOTE: that the params of a stream handler should include the below params
+    # and will pass in every param the vector endpoint has
+    # but only need to list the ones needed and catch the rest with kwargs
     @classmethod
     @abstractmethod
-    def stream_handler(cls, pre_df, cur_row, *args, **kwargs):
+    def stream_handler(cls, pre_df, cur_row, **kwargs):
         """
         Unified middleman method owned by each class.
         Produces a dictionary that can be directly passed to stream_endpoint.

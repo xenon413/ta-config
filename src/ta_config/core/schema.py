@@ -2,6 +2,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 from abc import ABC, abstractmethod
 from typing import Type
+from functools import cached_property
+import pandas as pd
 
 from .indicators import(
     SMACalc, 
@@ -20,10 +22,10 @@ from .indicators import(
 )
 from .indicators.base_indicator import BaseIndicator
 
-class MyBaseModel(BaseModel, ABC):
+class BaseConfig(BaseModel, ABC):
     model_config = ConfigDict(
         extra="forbid",
-        populate_by_name=True
+        populate_by_name=True,
     )
 
     indicator_class:Type[BaseIndicator] = Field(
@@ -31,19 +33,23 @@ class MyBaseModel(BaseModel, ABC):
         exclude=True
     )
 
-    @abstractmethod
-    def dependent(self)->tuple[str]:
-        """returns the required field name to exist before executing"""
-        pass
-
     # @abstractmethod
     # def generate(self)->tuple[str, ...]:
     #     """returns the field name that returns after executing"""
     #     pass
+        
+    @abstractmethod
+    def column_mapping(self)->dict[str, str]:...
 
+# add alias if perfer other name
 # ---- sma ----
-class SMACalcConfig(MyBaseModel):
-    base:str
+class _SMACalcColumn(BaseConfig):
+    base_series:str = Field(alias="base")
+
+    def column_mapping(self)->dict[str, str]:
+        return self.model_dump(include=set(_SMACalcColumn.model_fields.keys()), exclude_none=True)
+    
+class SMACalcConfig(_SMACalcColumn):
     window:int
 
     indicator_class:Type[BaseIndicator] = Field(
@@ -51,14 +57,16 @@ class SMACalcConfig(MyBaseModel):
         exclude=True
     )
 
-    def dependent(self)->tuple[str]:
-        return self.base,
-
-class SMA2SMACrossStandardConfig(MyBaseModel):
-    base:str
+class _SMA2SMACrossStandardColumn(BaseConfig):
+    base_series:str = Field(alias="base")
     sma1:str
-    window1:int
     sma2:str
+
+    def column_mapping(self)->dict[str, str]:
+        return self.model_dump(include=set(_SMA2SMACrossStandardColumn.model_fields.keys()), exclude_none=True)
+    
+class SMA2SMACrossStandardConfig(_SMA2SMACrossStandardColumn):
+    window1:int
     window2:int
 
     indicator_class:Type[BaseIndicator] = Field(
@@ -66,13 +74,15 @@ class SMA2SMACrossStandardConfig(MyBaseModel):
         exclude=True
     )
 
-    def dependent(self)->tuple[str, str, str]:
-        return self.base, self.sma1, self.sma2
-
-class SMATrendMaintValConfig(MyBaseModel):
-    base:str
+class _SMATrendMaintValColumn(BaseConfig):
+    base_series:str = Field(alias="base")
     sma:str
     prev_sma:str
+
+    def column_mapping(self)->dict[str, str]:
+        return self.model_dump(include=set(_SMATrendMaintValColumn.model_fields.keys()), exclude_none=True)
+
+class SMATrendMaintValConfig(_SMATrendMaintValColumn):
     window:int
 
     indicator_class:Type[BaseIndicator] = Field(
@@ -80,25 +90,28 @@ class SMATrendMaintValConfig(MyBaseModel):
         exclude=True
     )
 
-    def dependent(self)->tuple[str, str, str]:
-        return self.base, self.sma, self.prev_sma
+class _SMAAdjustColumn(BaseConfig):
+    base_series:str = Field(alias="base")
+    adj_series:str = Field(alias="adj")
 
-class SMAAdjustConfig(MyBaseModel):
-    base:str
-    adj:str
+    def column_mapping(self)->dict[str, str]:
+        return self.model_dump(include=set(_SMAAdjustColumn.model_fields.keys()), exclude_none=True)
+
+class SMAAdjustConfig(_SMAAdjustColumn):
     window:int
-
     indicator_class:Type[BaseIndicator] = Field(
         default=SMAadjust,
         exclude=True
     )
 
-    def dependent(self)->tuple[str,str]:
-        return self.base, self.adj
-
 # ---- ema ----
-class EMACalcConfig(MyBaseModel):
-    base:str
+class _EMACalcColumn(BaseConfig):
+    base_series:str = Field(alias="base")
+
+    def column_mapping(self)->dict[str, str]:
+        return self.model_dump(include=set(_EMACalcColumn.model_fields.keys()), exclude_none=True)
+     
+class EMACalcConfig(_EMACalcColumn):
     window:int
     smoothing:Optional[float]=None
 
@@ -107,13 +120,15 @@ class EMACalcConfig(MyBaseModel):
         exclude=True
     )
 
-    def dependent(self)->tuple[str]:
-        return self.base,
-
 # ---- macd ----
-class MACDCalcConfig(MyBaseModel):
+class _MACDCalcColumn(BaseConfig):
     fast_ema:str
     slow_ema:str
+
+    def column_mapping(self)->dict[str, str]:
+        return self.model_dump(include=set(_MACDCalcColumn.model_fields.keys()), exclude_none=True)
+     
+class MACDCalcConfig(_MACDCalcColumn):
     signal:int
 
     indicator_class:Type[BaseIndicator] = Field(
@@ -121,11 +136,8 @@ class MACDCalcConfig(MyBaseModel):
         exclude=True
     )
 
-    def dependent(self)->tuple[str,str]:
-        return self.fast_ema, self.slow_ema
-
 # ---- relation ----
-class CrossTypeConfig(MyBaseModel):
+class _CrossTypeColumn(BaseConfig):
     s1:str
     s2:str
     prev_s1:str
@@ -135,121 +147,103 @@ class CrossTypeConfig(MyBaseModel):
     upper_standard:Optional[str]=None
     lower_standard:Optional[str]=None
 
+    def column_mapping(self)->dict[str, str]:
+        return self.model_dump(include=set(_CrossTypeColumn.model_fields.keys()), exclude_none=True)
+
+class CrossTypeConfig(_CrossTypeColumn):
     indicator_class:Type[BaseIndicator] = Field(
         default=CrossType,
         exclude=True
     )
 
-    def dependent(self)->tuple[str, ...]:
-        res = [self.s1, self.s2]
-        if self.prev_s1 is not None:
-            res.append(self.prev_s1)
-
-        if self.prev_s2 is not None:
-            res.append(self.prev_s2)
-
-        if self.upper_bound is not None:
-            res.append(self.upper_bound)
-
-        if self.lower_bound is not None:
-            res.append(self.lower_bound)
-
-        if self.upper_standard is not None:
-            res.append(self.upper_standard)
-
-        if self.lower_standard is not None:
-            res.append(self.lower_standard)
-
-        return tuple(res)
-    
-class CrossValConfig(MyBaseModel):
+class _CrossValColumn(BaseConfig):
     s1:str
     s2:str
-    base:str
+    base_series:str = Field(alias="base")
     cross_type:str
     upper_bound:Optional[str]=None
     lower_bound:Optional[str]=None
     upper_standard:Optional[str]=None
     lower_standard:Optional[str]=None
 
+    def column_mapping(self)->dict[str, str]:
+        return self.model_dump(include=set(_CrossValColumn.model_fields.keys()), exclude_none=True)
+
+class CrossValConfig(_CrossValColumn):
     indicator_class:Type[BaseIndicator] = Field(
         default=CrossVal,
         exclude=True
     )
 
-    def dependent(self)->tuple[str, ...]:
-        res = [self.s1, self.s2, self.base, self.cross_type]
-        if self.upper_bound is not None:
-            res.append(self.upper_bound)
-
-        if self.lower_bound is not None:
-            res.append(self.lower_bound)
-
-        if self.upper_standard is not None:
-            res.append(self.upper_standard)
-
-        if self.lower_standard is not None:
-            res.append(self.lower_standard)
-
-        return tuple(res)
-
-class TrendTypeConfig(MyBaseModel):
+class _TrendTypeColumn(BaseConfig):
     upper_bound:str
     lower_bound:str
+    prev_base_series:str = Field(alias="prev_base")
+
+    def column_mapping(self)->dict[str, str]:
+        return self.model_dump(include=set(_TrendTypeColumn.model_fields.keys()), exclude_none=True)
+
+class TrendTypeConfig(_TrendTypeColumn):
     thresh:float
     trend_len:int
-    prev_base:str
 
     indicator_class:Type[BaseIndicator] = Field(
         default=TrendType,
         exclude=True
     )
-
-    def dependent(self)->tuple[str, str, str]:
-        return self.upper_bound, self.lower_bound, self.prev_base
     
-class TrendValConfig(MyBaseModel):
+class _TrendValColumn(BaseConfig):
     upper_bound:str
     lower_bound:str
     upper_standard:str
     lower_standard:str
     trend_type:str
-    base:str
+    base_series:str = Field(alias="base")
 
+    def column_mapping(self)->dict[str, str]:
+        return self.model_dump(include=set(_TrendValColumn.model_fields.keys()), exclude_none=True)
+
+class TrendValConfig(_TrendValColumn):
     indicator_class:Type[BaseIndicator] = Field(
         default=TrendVal,
         exclude=True
     )
 
-    def dependent(self)->tuple[str, ...]:
-        return self.upper_bound, self.lower_bound, self.upper_standard, self.lower_standard, self.trend_type, self.base
-    
-class WindowMaxConfig(MyBaseModel):
-    base:str
+class _WindowMaxColumn(BaseConfig):
+    base_series:str = Field(alias="base")
+
+    def column_mapping(self)->dict[str, str]:
+        return self.model_dump(include=set(_WindowMaxColumn.model_fields.keys()), exclude_none=True)
+
+class WindowMaxConfig(_WindowMaxColumn):
     window:int
 
     indicator_class:Type[BaseIndicator] = Field(
         default=WindowMax,
         exclude=True
     )
-
-    def dependent(self)->tuple[str]:
-        return self.base,
     
-class WindowMinConfig(MyBaseModel):
-    base:str
+class _WindowMinColumn(BaseConfig):
+    base_series:str = Field(alias="base")
+
+    def column_mapping(self)->dict[str, str]:
+        return self.model_dump(include=set(_WindowMinColumn.model_fields.keys()), exclude_none=True)
+
+class WindowMinConfig(_WindowMinColumn):
     window:int
 
     indicator_class:Type[BaseIndicator] = Field(
         default=WindowMin,
         exclude=True
     )
-
-    def dependent(self)->tuple[str]:
-        return self.base,
     
-class ShiftConfig(MyBaseModel):
-    base:str
+class _ShiftColumn(BaseConfig):
+    base_series:str = Field(alias="base")
+
+    def column_mapping(self)->dict[str, str]:
+        return self.model_dump(include=set(_ShiftColumn.model_fields.keys()), exclude_none=True)
+
+class ShiftConfig(_ShiftColumn):
     period:int
 
     indicator_class:Type[BaseIndicator] = Field(
@@ -257,10 +251,7 @@ class ShiftConfig(MyBaseModel):
         exclude=True
     )
 
-    def dependent(self)->tuple[str]:
-        return self.base,
-
-class IndexConfig(MyBaseModel):
+class IndexConfig(BaseModel):
     sma_calc:Optional[dict[str, SMACalcConfig]] = None
     sma_trend:Optional[dict[str, SMATrendMaintValConfig]] = None
     sma_adjust:Optional[dict[str, SMAAdjustConfig]] = None
@@ -275,5 +266,63 @@ class IndexConfig(MyBaseModel):
     window_min:Optional[dict[str, WindowMinConfig]] = None
     shift:Optional[dict[str, ShiftConfig]] = None
     
-    def dependent(self)->tuple[str, ...]:...
+    def config(self, df:pd.DataFrame)->pd.DataFrame:
+        # init
+        df = df.copy()
+        tasks:dict[str, BaseConfig] = {} # field_name -> field
+        dependencies:dict[str, list[str]] = {} # field_name -> deps_name
+        task_by_output:dict[str, str] = {} # generate_name -> field_name
+
+        for _, field in self:
+            if field is None:
+                continue
+            field:dict[str, BaseConfig]
+            for field_name, field_config in field.items():
+                
+                # flatten
+                tasks[field_name] = field_config
+
+                dependencies[field_name] = [d for d in field_config.column_mapping().values() if d is not None]
+                
+                for out_key in field_config.indicator_class.output_keys(field_name):
+                    task_by_output[out_key] = field_name
+
+        # sort
+        visited = set()
+        temp_visited = set() # in one chain, prevent looping
+
+        def visit(node:str):
+            nonlocal df
+            if node in temp_visited:
+                raise ValueError(f"Cyclic dependency detected: {node}")
+            if node not in visited:
+                temp_visited.add(node)
+                for dep in dependencies.get(node, []):
+                    # get task from dependent if task exist
+                    # if not exist view as the leaf
+                    # handles the dependents on original df
+                    dep_task = task_by_output.get(dep)
+                    if dep_task:
+                        visit(dep_task)
+                temp_visited.remove(node)
+                visited.add(node)
+
+                # config
+                field_config = tasks[node] # node is the field name
+                params = field_config.model_dump(exclude_none=True)
+                indicator_cls = field_config.indicator_class
+                
+                # get columns
+                col_val:dict[str, pd.Series] = {
+                    arg_name:df[col_name] for arg_name, col_name in field_config.column_mapping().items()
+                }
+                params.update(col_val)
+                params |= {"name":node}
+                df = pd.concat([df, indicator_cls.vector_endpoint(**params)], axis=1)
+
+        for node in tasks:
+            if node not in visited:
+                visit(node)
+
+        return df
 
