@@ -252,6 +252,8 @@ class ShiftConfig(_ShiftColumn):
     )
 
 class IndexConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     sma_calc:Optional[dict[str, SMACalcConfig]] = None
     sma_trend:Optional[dict[str, SMATrendMaintValConfig]] = None
     sma_adjust:Optional[dict[str, SMAAdjustConfig]] = None
@@ -266,9 +268,9 @@ class IndexConfig(BaseModel):
     window_min:Optional[dict[str, WindowMinConfig]] = None
     shift:Optional[dict[str, ShiftConfig]] = None
     
-    def config(self, df:pd.DataFrame)->pd.DataFrame:
+    @cached_property
+    def config_order(self)->list[tuple[str, BaseConfig]]:
         # init
-        df = df.copy()
         tasks:dict[str, BaseConfig] = {} # field_name -> field
         dependencies:dict[str, list[str]] = {} # field_name -> deps_name
         task_by_output:dict[str, str] = {} # generate_name -> field_name
@@ -288,11 +290,11 @@ class IndexConfig(BaseModel):
                     task_by_output[out_key] = field_name
 
         # sort
+        sorted_task = []
         visited = set()
         temp_visited = set() # in one chain, prevent looping
 
         def visit(node:str):
-            nonlocal df
             if node in temp_visited:
                 raise ValueError(f"Cyclic dependency detected: {node}")
             if node not in visited:
@@ -306,23 +308,56 @@ class IndexConfig(BaseModel):
                         visit(dep_task)
                 temp_visited.remove(node)
                 visited.add(node)
-
-                # config
-                field_config = tasks[node] # node is the field name
-                params = field_config.model_dump(exclude_none=True)
-                indicator_cls = field_config.indicator_class
-                
-                # get columns
-                col_val:dict[str, pd.Series] = {
-                    arg_name:df[col_name] for arg_name, col_name in field_config.column_mapping().items()
-                }
-                params.update(col_val)
-                params |= {"name":node}
-                df = pd.concat([df, indicator_cls.vector_endpoint(**params)], axis=1)
+                sorted_task.append((node, tasks[node]))
 
         for node in tasks:
             if node not in visited:
                 visit(node)
 
-        return df
+        return sorted_task
 
+    def vector_config(self, df:pd.DataFrame)->pd.DataFrame:
+        df = df.copy()
+        for field_name, field_config in self.config_order:
+            field_name:str
+            field_config:BaseConfig
+
+            kwargs = field_config.model_dump(exclude_none=True)
+            indicator_cls = field_config.indicator_class
+            
+            # get columns
+            col_val:dict[str, pd.Series] = {
+                arg_name:df[col_name] for arg_name, col_name in field_config.column_mapping().items()
+            }
+            kwargs.update(col_val)
+            kwargs |= {"name":field_name}
+            df = pd.concat([df, indicator_cls.vector_endpoint(**kwargs)], axis=1)
+
+        return df
+    
+    # make it into stream update and stream rotate, let user decide when to use which
+    def stream_config(self, df:pd.DataFrame, row:dict)->pd.DataFrame:
+        prev_df = df.copy()
+        cur_df = df.copy()
+        cur_df.loc[len(df)] = None
+
+        cur_row = row.copy()
+        for field_name, field_config in self.config_order:
+            field_name:str
+            field_config:BaseConfig
+
+            kwargs = field_config.model_dump(exclude_none=True)
+            indicator_cls = field_config.indicator_class
+            
+            # get columns
+            col_val:dict[str, pd.Series] = {
+                arg_name:prev_df[col_name] for arg_name, col_name in field_config.column_mapping().items()
+            }
+            kwargs.update(col_val)
+            kwargs |= {"name":field_name, "prev_df":prev_df, "cur_row":cur_row}
+            res = indicator_cls.stream_handler(**kwargs)
+
+            col_pos = [cur_df.columns.get_loc(col) for col in res]
+            cur_df.iloc[-1, col_pos] = list(res.values())
+        
+        return cur_df

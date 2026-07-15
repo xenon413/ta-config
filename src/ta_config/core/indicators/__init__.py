@@ -32,11 +32,11 @@ class SMACalc(_SMACalc):
     name = "sma_calc"
     @classmethod
     def vector_endpoint(
-            cls,
-            base_series:pd.Series,
-            window:int, 
-            name:Optional[str]=None
-        )->pd.DataFrame:
+        cls,
+        base_series:pd.Series,
+        window:int, 
+        name:Optional[str]=None
+    )->pd.DataFrame:
         """
         Execute historical vectorized matrix calculations for SMA.
         
@@ -58,13 +58,13 @@ class SMACalc(_SMACalc):
     
     @classmethod
     def stream_endpoint(
-            cls,
-            prev_sma:float, 
-            prev_base:float, 
-            cur_base:float, 
-            window:int, 
-            name:Optional[str]=None
-        )->dict[str, float]:
+        cls,
+        prev_sma:float, 
+        prev_base:float, 
+        cur_base:float, 
+        window:int, 
+        name:Optional[str]=None
+    )->dict[str, float]:
         """
         Compute the next step SMA using a low-latency O(1) recursive equation.
         
@@ -89,12 +89,44 @@ class SMACalc(_SMACalc):
         )
 
     @classmethod
+    def stream_handler(
+        cls,
+        base_series:pd.Series,
+        window:int,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float],
+        name:Optional[str]=None,
+    )->dict[str, float]:
+        """
+        Process the next stream step SMA using the previous DataFrame state.
+        
+        Args:
+            base_series (pd.Series[float]): The input series history.
+            window (int): The rolling window size.
+            name (str): The key name for the output dictionary. Defaults to "sma_calc".
+            prev_df (pd.DataFrame): The previous DataFrame state.
+            cur_row (dict[str, int | float]): The current row values.
+            
+        Returns:
+            dict[str, float]: A dictionary with the computed SMA.
+        """
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().stream_handler(
+            base_series=base_series,
+            window=window,
+            name=names[0],
+            prev_df=prev_df,
+            cur_row=cur_row
+        )
+
+    @classmethod
     def tail(
-            cls, 
-            base_series:pd.Series, 
-            window:int, 
-            name:Optional[str]=None
-        )->dict[str, float]:
+        cls, 
+        base_series:pd.Series, 
+        window:int, 
+        name:Optional[str]=None
+    )->dict[str, float]:
         """
         Calculate the SMA for the tail of a series.
         
@@ -123,14 +155,14 @@ class SMA2SMACrossStandard(_SMA2SMACrossStandard):
     name = "sma2sma_cross_standard"
     @classmethod
     def vector_endpoint(
-            cls, 
-            base_series:pd.Series,
-            sma1:pd.Series, 
-            window1:int, 
-            sma2:pd.Series, 
-            window2:int, 
-            name:Optional[str]=None
-        )->pd.DataFrame:
+        cls, 
+        base_series:pd.Series,
+        sma1:pd.Series, 
+        window1:int, 
+        sma2:pd.Series, 
+        window2:int, 
+        name:Optional[str]=None
+    )->pd.DataFrame:
         """
         Execute historical vectorized calculations for SMA cross standards.
         
@@ -158,14 +190,14 @@ class SMA2SMACrossStandard(_SMA2SMACrossStandard):
     
     @classmethod
     def stream_endpoint(
-            cls, 
-            cur_base:float,
-            cur_sma1:float,
-            window1:int,
-            cur_sma2:float,
-            window2:int,
-            name:Optional[str]=None
-        )->dict[str, float]:
+        cls, 
+        cur_base:float,
+        cur_sma1:float,
+        window1:int,
+        cur_sma2:float,
+        window2:int,
+        name:Optional[str]=None
+    )->dict[str, float]:
         """
         Compute the next step SMA cross standard using O(1) math.
         
@@ -190,6 +222,47 @@ class SMA2SMACrossStandard(_SMA2SMACrossStandard):
             window2=window2,
             name=names[0]
         )
+
+    @classmethod
+    def stream_handler(
+        cls,
+        base_series:pd.Series,
+        sma1:pd.Series,
+        sma2:pd.Series,
+        window1:int,
+        window2:int,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float],
+        name:Optional[str]=None,
+    )->dict[str, float]:
+        """
+        Process the next stream step SMA cross standard using the previous DataFrame state.
+        
+        Args:
+            base_series (pd.Series[float]): The base price series.
+            sma1 (pd.Series[float]): The first SMA series.
+            sma2 (pd.Series[float]): The second SMA series.
+            window1 (int): The window size of the first SMA.
+            window2 (int): The window size of the second SMA.
+            name (str): The key name for the output dictionary. Defaults to "sma2sma_cross_standard".
+            prev_df (pd.DataFrame): The previous DataFrame state.
+            cur_row (dict[str, int | float]): The current row values.
+            
+        Returns:
+            dict[str, float]: A dictionary with the computed cross standard value.
+        """
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().stream_handler(
+            base_series=base_series,
+            sma1=sma1,
+            sma2=sma2,
+            window1=window1,
+            window2=window2,
+            name=names[0],
+            prev_df=prev_df,
+            cur_row=cur_row
+        )
     
 class SMATrendMaintVal(_SMATrendMaintVal):
     """
@@ -199,13 +272,13 @@ class SMATrendMaintVal(_SMATrendMaintVal):
     name = "sma_trend_maint_val"
     @classmethod
     def vector_endpoint(
-            cls, 
-            sma:pd.Series,
-            prev_sma:pd.Series,
-            window:int,
-            base_series:pd.Series,
-            name:Optional[str]=None
-        )->pd.DataFrame:
+        cls, 
+        sma:pd.Series,
+        prev_sma:pd.Series,
+        window:int,
+        base_series:pd.Series,
+        name:Optional[str]=None
+    )->pd.DataFrame:
         """
         Execute historical vectorized calculations for SMA trend maintenance value.
         
@@ -231,13 +304,13 @@ class SMATrendMaintVal(_SMATrendMaintVal):
 
     @classmethod
     def stream_endpoint(
-            cls, 
-            cur_base:float, 
-            cur_sma:float, 
-            prev_sma:float,
-            window:int,
-            name:Optional[str]=None
-        )->dict[str, float]:
+        cls, 
+        cur_base:float, 
+        cur_sma:float, 
+        prev_sma:float,
+        window:int,
+        name:Optional[str]=None
+    )->dict[str, float]:
         """
         Compute the next step SMA trend maintenance value using O(1) math.
         
@@ -261,6 +334,44 @@ class SMATrendMaintVal(_SMATrendMaintVal):
             name=names[0]
         )
 
+    @classmethod
+    def stream_handler(
+        cls,
+        base_series:pd.Series,
+        sma:pd.Series,
+        prev_sma:pd.Series,
+        window:int,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float],
+        name:Optional[str]=None,
+    )->dict[str, float]:
+        """
+        Process the next stream step SMA trend maintenance value using the previous DataFrame state.
+        
+        Args:
+            base_series (pd.Series[float]): The base price series.
+            sma (pd.Series[float]): The current SMA series.
+            prev_sma (pd.Series[float]): The previous step's SMA series.
+            window (int): The rolling window size.
+            name (str): The key name for the output dictionary. Defaults to "sma_trend_maint_val".
+            prev_df (pd.DataFrame): The previous DataFrame state.
+            cur_row (dict[str, int | float]): The current row values.
+            
+        Returns:
+            dict[str, float]: A dictionary with the computed trend maintenance value.
+        """
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().stream_handler(
+            base_series=base_series,
+            sma=sma,
+            prev_sma=prev_sma,
+            window=window,
+            name=names[0],
+            prev_df=prev_df,
+            cur_row=cur_row
+        )
+
 class SMAadjust(_SMAadjust):
     """
     Adjusts the SMA based on an adjustment series.
@@ -269,12 +380,12 @@ class SMAadjust(_SMAadjust):
     name = "sma_adjust"
     @classmethod
     def vector_endpoint(
-            cls, 
-            base_series:pd.Series,
-            adj_series:pd.Series,
-            window:int,
-            name:Optional[str]=None
-        )->pd.DataFrame:
+        cls, 
+        base_series:pd.Series,
+        adj_series:pd.Series,
+        window:int,
+        name:Optional[str]=None
+    )->pd.DataFrame:
         """
         Execute historical vectorized matrix calculations for SMA adjustment.
         
@@ -299,12 +410,12 @@ class SMAadjust(_SMAadjust):
 
     @classmethod
     def stream_endpoint(
-            cls, 
-            cur_base:float, 
-            cur_adj:float, 
-            window:int, 
-            name:Optional[str]=None
-        )->dict[str, float]:
+        cls, 
+        cur_base:float, 
+        cur_adj:float, 
+        window:int, 
+        name:Optional[str]=None
+    )->dict[str, float]:
         """
         Compute the next step SMA adjustment value using O(1) math.
         
@@ -325,6 +436,41 @@ class SMAadjust(_SMAadjust):
             window=window,
             name=names[0]
         )
+
+    @classmethod
+    def stream_handler(
+        cls,
+        base_series:pd.Series,
+        adj_series:pd.Series,
+        window:int,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float],
+        name:Optional[str]=None,
+    )->dict[str, float]:
+        """
+        Process the next stream step SMA adjustment using the previous DataFrame state.
+        
+        Args:
+            base_series (pd.Series[float]): The base price series.
+            adj_series (pd.Series[float]): The adjustment series.
+            window (int): The rolling window size.
+            name (str): The key name for the output dictionary. Defaults to "sma_adjust".
+            prev_df (pd.DataFrame): The previous DataFrame state.
+            cur_row (dict[str, int | float]): The current row values.
+            
+        Returns:
+            dict[str, float]: A dictionary with the computed adjusted SMA.
+        """
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().stream_handler(
+            base_series=base_series,
+            adj_series=adj_series,
+            window=window,
+            name=names[0],
+            prev_df=prev_df,
+            cur_row=cur_row
+        )
     
 # ---- from .ema ----
 class EMACalc(_EMACalc):
@@ -335,12 +481,12 @@ class EMACalc(_EMACalc):
     name = "ema_calc"
     @classmethod
     def vector_endpoint(
-            cls, 
-            base_series:pd.Series, 
-            window:int, 
-            smoothing:Optional[float]=None,
-            name:Optional[str]=None
-        )->pd.Series:
+        cls, 
+        base_series:pd.Series, 
+        window:int, 
+        smoothing:Optional[float]=None,
+        name:Optional[str]=None
+    )->pd.Series:
         """
         Execute historical vectorized matrix calculations for EMA.
         
@@ -365,13 +511,13 @@ class EMACalc(_EMACalc):
     
     @classmethod
     def stream_endpoint(
-            cls, 
-            prev_ema:float, 
-            cur_base:float, 
-            window:int, 
-            smoothing:Optional[float]=None, 
-            name:Optional[str]=None
-        )->dict[str, float]:
+        cls, 
+        prev_ema:float, 
+        cur_base:float, 
+        window:int, 
+        smoothing:Optional[float]=None, 
+        name:Optional[str]=None
+    )->dict[str, float]:
         """
         Compute the next step EMA using a low-latency O(1) recursive equation.
         
@@ -395,6 +541,42 @@ class EMACalc(_EMACalc):
             smoothing=smoothing,
             name=names[0]
         )
+
+    @classmethod
+    def stream_handler(
+        cls,
+        base_series:pd.Series,
+        window:int,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float],
+        smoothing:Optional[float]=None,
+        name:Optional[str]=None,
+    )->dict[str, float]:
+        """
+        Process the next stream step EMA using the previous DataFrame state.
+        
+        Args:
+            base_series (pd.Series[float]): The input series history.
+            window (int): The window size for the calculation.
+            smoothing (float): The smoothing factor. Defaults to 2.
+            name (str): The key name for the output dictionary. Defaults to "ema_calc".
+            prev_df (pd.DataFrame): The previous DataFrame state.
+            cur_row (dict[str, int | float]): The current row values.
+            
+        Returns:
+            dict[str, float]: A dictionary with the computed EMA.
+        """
+        smoothing = smoothing or 2
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().stream_handler(
+            base_series=base_series,
+            window=window,
+            smoothing=smoothing,
+            name=names[0],
+            prev_df=prev_df,
+            cur_row=cur_row
+        )
     
 class MACDCalc(_MACDCalc):
     """
@@ -409,12 +591,12 @@ class MACDCalc(_MACDCalc):
     )
     @classmethod
     def vector_endpoint(
-            cls, 
-            fast_ema:pd.Series, 
-            slow_ema:pd.Series, 
-            signal:int,
-            name:Optional[str]=None
-        )->pd.DataFrame:
+        cls, 
+        fast_ema:pd.Series, 
+        slow_ema:pd.Series, 
+        signal:int,
+        name:Optional[str]=None
+    )->pd.DataFrame:
         """
         Execute historical vectorized matrix calculations for MACD.
         
@@ -440,13 +622,13 @@ class MACDCalc(_MACDCalc):
 
     @classmethod
     def stream_endpoint(
-            cls, 
-            cur_fast_ema:float, 
-            cur_slow_ema:float,
-            signal:int,
-            prev_signal_line:float,
-            name:Optional[str]=None
-        )->dict[str, float]:
+        cls, 
+        cur_fast_ema:float, 
+        cur_slow_ema:float,
+        signal:int,
+        prev_signal_line:float,
+        name:Optional[str]=None
+    )->dict[str, float]:
         """
         Compute the next step MACD components using low-latency O(1) calculations.
         
@@ -472,6 +654,45 @@ class MACDCalc(_MACDCalc):
             hist_name=names[2]
         )
 
+    @classmethod
+    def stream_handler(
+        cls,
+        fast_ema:pd.Series,
+        slow_ema:pd.Series,
+        signal:int,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float],
+        name:Optional[str]=None,
+    )->dict[str, float]:
+        """
+        Process the next stream step MACD components using the previous DataFrame state.
+        
+        Args:
+            fast_ema (pd.Series[float]): The fast EMA series.
+            slow_ema (pd.Series[float]): The slow EMA series.
+            signal (int): The window size for the signal line EMA.
+            name (str): The base key name for the output dictionary. Defaults to "macd_calc".
+            signal_name (str): The key name for the signal line output. Defaults to "macd_calc_signal".
+            hist_name (str): The key name for the histogram output. Defaults to "macd_calc_hist".
+            prev_df (pd.DataFrame): The previous DataFrame state.
+            cur_row (dict[str, int | float]): The current row values.
+            
+        Returns:
+            dict[str, float]: A dictionary with the computed MACD line, signal line, and histogram.
+        """
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().stream_handler(
+            fast_ema=fast_ema,
+            slow_ema=slow_ema,
+            signal=signal,
+            name=names[0],
+            signal_name=names[1],
+            hist_name=names[2],
+            prev_df=prev_df,
+            cur_row=cur_row
+        )
+
 # ---- from .relation ----
 class CrossType(_CrossType):
     """
@@ -482,17 +703,17 @@ class CrossType(_CrossType):
     name = "cross_type"
     @classmethod
     def vector_endpoint(
-            cls, 
-            s1:pd.Series, 
-            s2:pd.Series, 
-            prev_s1:pd.Series, 
-            prev_s2:pd.Series,
-            upper_bound:Optional[pd.Series]=None,
-            lower_bound:Optional[pd.Series]=None, 
-            upper_standard:Optional[pd.Series]=None, 
-            lower_standard:Optional[pd.Series]=None,
-            name:Optional[str]=None
-        )->pd.DataFrame:
+        cls, 
+        s1:pd.Series, 
+        s2:pd.Series, 
+        prev_s1:pd.Series, 
+        prev_s2:pd.Series,
+        upper_bound:Optional[pd.Series]=None,
+        lower_bound:Optional[pd.Series]=None, 
+        upper_standard:Optional[pd.Series]=None, 
+        lower_standard:Optional[pd.Series]=None,
+        name:Optional[str]=None
+    )->pd.DataFrame:
         """
         Execute historical vectorized calculations for determining cross types.
         
@@ -526,17 +747,17 @@ class CrossType(_CrossType):
     
     @classmethod
     def stream_endpoint(
-            cls,
-            cur_s1:float,
-            cur_s2:float,
-            prev_s1:float,
-            prev_s2:float,
-            cur_upper_bound:Optional[float]=None,
-            cur_upper_standard:Optional[float]=None,
-            cur_lower_bound:Optional[float]=None,
-            cur_lower_standard:Optional[float]=None,
-            name:Optional[str]=None
-        )->dict[str, int]:
+        cls,
+        cur_s1:float,
+        cur_s2:float,
+        prev_s1:float,
+        prev_s2:float,
+        cur_upper_bound:Optional[float]=None,
+        cur_upper_standard:Optional[float]=None,
+        cur_lower_bound:Optional[float]=None,
+        cur_lower_standard:Optional[float]=None,
+        name:Optional[str]=None
+    )->dict[str, int]:
         """
         Compute the next step cross type using O(1) boolean logic.
         
@@ -568,6 +789,56 @@ class CrossType(_CrossType):
             name=names[0]
         )
 
+    @classmethod
+    def stream_handler(
+        cls,
+        s1:pd.Series,
+        s2:pd.Series,
+        prev_s1:pd.Series,
+        prev_s2:pd.Series,
+        prev_df:pd.DataFrame=None,
+        cur_row:dict[str, int|float]=None,
+        upper_bound:Optional[pd.Series]=None,
+        lower_bound:Optional[pd.Series]=None,
+        upper_standard:Optional[pd.Series]=None,
+        lower_standard:Optional[pd.Series]=None,
+        name:Optional[str]=None,
+    )->dict[str, int]:
+        """
+        Process the next stream step cross type using the previous DataFrame state.
+        
+        Args:
+            s1 (pd.Series[float]): The first series.
+            s2 (pd.Series[float]): The second series.
+            prev_s1 (pd.Series[float]): The previous step's first series.
+            prev_s2 (pd.Series[float]): The previous step's second series.
+            upper_bound (Optional[pd.Series[float]]): The upper drift boundary. Defaults to s1 if None.
+            lower_bound (Optional[pd.Series[float]]): The lower drift boundary. Defaults to s2 if None.
+            upper_standard (Optional[pd.Series[float]]): The upper cross standard. Defaults to s2 if None.
+            lower_standard (Optional[pd.Series[float]]): The lower cross standard. Defaults to s1 if None.
+            name (str): The key name for the output dictionary. Defaults to "cross_type".
+            prev_df (pd.DataFrame): The previous DataFrame state.
+            cur_row (dict[str, int | float]): The current row values.
+            
+        Returns:
+            dict[str, int]: A dictionary with the computed cross type.
+        """
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().stream_handler(
+            s1=s1,
+            s2=s2,
+            prev_s1=prev_s1,
+            prev_s2=prev_s2,
+            upper_bound=upper_bound,
+            lower_bound=lower_bound,
+            upper_standard=upper_standard,
+            lower_standard=lower_standard,
+            name=names[0],
+            prev_df=prev_df,
+            cur_row=cur_row
+        )
+
 class CrossVal(_CrossVal):
     """
     Evaluates the price or standard at which a crossover occurred.
@@ -576,17 +847,17 @@ class CrossVal(_CrossVal):
     name = "cross_val"
     @classmethod
     def vector_endpoint(
-            cls, 
-            s1:pd.Series, 
-            s2:pd.Series,
-            base_series:pd.Series,
-            cross_type:pd.Series,
-            upper_bound:Optional[pd.Series]=None,
-            lower_bound:Optional[pd.Series]=None, 
-            upper_standard:Optional[pd.Series]=None, 
-            lower_standard:Optional[pd.Series]=None, 
-            name:Optional[str]=None
-        )->pd.DataFrame:
+        cls, 
+        s1:pd.Series, 
+        s2:pd.Series,
+        base_series:pd.Series,
+        cross_type:pd.Series,
+        upper_bound:Optional[pd.Series]=None,
+        lower_bound:Optional[pd.Series]=None, 
+        upper_standard:Optional[pd.Series]=None, 
+        lower_standard:Optional[pd.Series]=None, 
+        name:Optional[str]=None
+    )->pd.DataFrame:
         """
         Execute historical vectorized calculations for cross values.
         
@@ -620,17 +891,17 @@ class CrossVal(_CrossVal):
     
     @classmethod
     def stream_endpoint(
-            cls, 
-            cur_s1:float, 
-            cur_s2:float,
-            cur_base:float,
-            cur_cross_type:int,
-            cur_upper_bound:Optional[float]=None,
-            cur_lower_bound:Optional[float]=None, 
-            cur_upper_standard:Optional[float]=None, 
-            cur_lower_standard:Optional[float]=None, 
-            name:Optional[str]=None
-        )->dict[str, float]:
+        cls, 
+        cur_s1:float, 
+        cur_s2:float,
+        cur_base:float,
+        cur_cross_type:int,
+        cur_upper_bound:Optional[float]=None,
+        cur_lower_bound:Optional[float]=None, 
+        cur_upper_standard:Optional[float]=None, 
+        cur_lower_standard:Optional[float]=None, 
+        name:Optional[str]=None
+    )->dict[str, float]:
         """
         Compute the next step cross value using O(1) selection logic.
         
@@ -662,6 +933,56 @@ class CrossVal(_CrossVal):
             name=names[0]
         )
 
+    @classmethod
+    def stream_handler(
+        cls,
+        s1:pd.Series,
+        s2:pd.Series,
+        base_series:pd.Series,
+        cross_type:pd.Series,
+        upper_bound:Optional[pd.Series]=None,
+        lower_bound:Optional[pd.Series]=None,
+        upper_standard:Optional[pd.Series]=None,
+        lower_standard:Optional[pd.Series]=None,
+        name:Optional[str]=None,
+        prev_df:pd.DataFrame=None,
+        cur_row:dict[str, int|float]=None
+    )->dict[str, float]:
+        """
+        Process the next stream step cross value using the previous DataFrame state.
+        
+        Args:
+            s1 (pd.Series[float]): The first series.
+            s2 (pd.Series[float]): The second series.
+            base_series (pd.Series[float]): The base price series.
+            cross_type (pd.Series[int]): The series of cross types.
+            upper_bound (Optional[pd.Series[float]]): The upper drift boundary. Defaults to s1 if None.
+            lower_bound (Optional[pd.Series[float]]): The lower drift boundary. Defaults to s2 if None.
+            upper_standard (Optional[pd.Series[float]]): The upper cross standard. Defaults to s2 if None.
+            lower_standard (Optional[pd.Series[float]]): The lower cross standard. Defaults to s1 if None.
+            name (str): The key name for the output dictionary. Defaults to "cross_val".
+            prev_df (pd.DataFrame): The previous DataFrame state.
+            cur_row (dict[str, int | float]): The current row values.
+            
+        Returns:
+            dict[str, float]: A dictionary with the computed cross value.
+        """
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().stream_handler(
+            s1=s1,
+            s2=s2,
+            base_series=base_series,
+            cross_type=cross_type,
+            upper_bound=upper_bound,
+            lower_bound=lower_bound,
+            upper_standard=upper_standard,
+            lower_standard=lower_standard,
+            name=names[0],
+            prev_df=prev_df,
+            cur_row=cur_row
+        )
+
 class TrendType(_TrendType):
     """
     Determines the trend direction based on upper and lower bounds compared to a threshold.
@@ -671,14 +992,14 @@ class TrendType(_TrendType):
     name = "trend_type"
     @classmethod
     def vector_endpoint(
-            cls, 
-            prev_base_series:pd.Series,
-            upper_bound:pd.Series,
-            lower_bound:pd.Series, 
-            thresh:float, 
-            trend_len:int,
-            name:Optional[str]=None
-        )->pd.DataFrame:
+        cls, 
+        prev_base_series:pd.Series,
+        upper_bound:pd.Series,
+        lower_bound:pd.Series, 
+        thresh:float, 
+        trend_len:int,
+        name:Optional[str]=None
+    )->pd.DataFrame:
         """
         Execute historical vectorized calculations for determining trend types.
         
@@ -713,7 +1034,7 @@ class TrendType(_TrendType):
         trend_len:int,
         prev_base_series:pd.Series, 
         name:Optional[str]=None
-        )->dict[str, int]:
+    )->dict[str, int]:
         """
         Compute the next step trend type. Currently uses a tail calculation approach.
         
@@ -739,6 +1060,82 @@ class TrendType(_TrendType):
             name=names[0]
         )
 
+    @classmethod
+    def stream_handler(
+        cls,
+        prev_base_series:pd.Series,
+        upper_bound:pd.Series,
+        lower_bound:pd.Series,
+        thresh:float,
+        trend_len:int,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float],
+        name:Optional[str]=None,
+    )->dict[str, int]:
+        """
+        Process the next stream step trend type using the previous DataFrame state.
+        
+        Args:
+            prev_base_series (pd.Series[float]): The previous base series history.
+            upper_bound (pd.Series[float]): The upper boundary series.
+            lower_bound (pd.Series[float]): The lower boundary series.
+            thresh (float): The flatness threshold percentage.
+            trend_len (int): The length of the window to confirm the trend.
+            name (str): The key name for the output dictionary. Defaults to "trend_type".
+            prev_df (pd.DataFrame): The previous DataFrame state.
+            cur_row (dict[str, int | float]): The current row values.
+            
+        Returns:
+            dict[str, int]: A dictionary with the computed trend type.
+        """
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().stream_handler(
+            prev_base_series=prev_base_series,
+            upper_bound=upper_bound,
+            lower_bound=lower_bound,
+            thresh=thresh,
+            trend_len=trend_len,
+            name=names[0],
+            prev_df=prev_df,
+            cur_row=cur_row
+        )
+
+    @classmethod
+    def tail(
+        cls,
+        prev_base_series:pd.Series,
+        upper_bound:pd.Series,
+        lower_bound:pd.Series,
+        thresh:float,
+        trend_len:int,
+        name:Optional[str]=None
+    )->dict[str, int]:
+        """
+        Calculate the trend type for the tail of a series.
+        
+        Args:
+            prev_base_series (pd.Series[float]): The recent previous base series history.
+            upper_bound (pd.Series[float]): The recent upper boundary series history.
+            lower_bound (pd.Series[float]): The recent lower boundary series history.
+            thresh (float): The flatness threshold percentage.
+            trend_len (int): The length of the window to confirm the trend.
+            name (str): The key name for the output dictionary. Defaults to "trend_type".
+            
+        Returns:
+            dict[str, int]: A dictionary with the computed tail trend type.
+        """
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().tail(
+            prev_base_series=prev_base_series,
+            upper_bound=upper_bound,
+            lower_bound=lower_bound,
+            thresh=thresh,
+            trend_len=trend_len,
+            name=names[0]
+        )
+
 class TrendVal(_TrendVal):
     """
     Evaluates the value associated with a specific trend direction.
@@ -747,15 +1144,15 @@ class TrendVal(_TrendVal):
     name = "trend_val"
     @classmethod
     def vector_endpoint(
-            cls, 
-            upper_bound:pd.Series,
-            lower_bound:pd.Series,
-            upper_standard:pd.Series,
-            lower_standard:pd.Series,
-            trend_type:pd.Series,
-            base_series:pd.Series,
-            name:Optional[str]=None
-        )->pd.DataFrame:
+        cls, 
+        upper_bound:pd.Series,
+        lower_bound:pd.Series,
+        upper_standard:pd.Series,
+        lower_standard:pd.Series,
+        trend_type:pd.Series,
+        base_series:pd.Series,
+        name:Optional[str]=None
+    )->pd.DataFrame:
         """
         Execute historical vectorized calculations for trend values.
         
@@ -785,15 +1182,15 @@ class TrendVal(_TrendVal):
 
     @classmethod
     def stream_endpoint(
-            cls, 
-            cur_upper_bound:float,
-            cur_lower_bound:float,
-            cur_upper_standard:float,
-            cur_lower_standard:float,
-            cur_trend_type:int,
-            cur_base:float,
-            name:Optional[str]=None
-        )->dict[str, float]:
+        cls, 
+        cur_upper_bound:float,
+        cur_lower_bound:float,
+        cur_upper_standard:float,
+        cur_lower_standard:float,
+        cur_trend_type:int,
+        cur_base:float,
+        name:Optional[str]=None
+    )->dict[str, float]:
         """
         Compute the next step trend value using O(1) selection logic.
         
@@ -821,6 +1218,50 @@ class TrendVal(_TrendVal):
             name=names[0]
         )
 
+    @classmethod
+    def stream_handler(
+        cls,
+        base_series:pd.Series,
+        upper_bound:pd.Series,
+        lower_bound:pd.Series,
+        upper_standard:pd.Series,
+        lower_standard:pd.Series,
+        trend_type:pd.Series,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float],
+        name:Optional[str]=None,
+    )->dict[str, float]:
+        """
+        Process the next stream step trend value using the previous DataFrame state.
+        
+        Args:
+            base_series (pd.Series[float]): The base price series.
+            upper_bound (pd.Series[float]): The upper boundary series.
+            lower_bound (pd.Series[float]): The lower boundary series.
+            upper_standard (pd.Series[float]): The upper standard series.
+            lower_standard (pd.Series[float]): The lower standard series.
+            trend_type (pd.Series[int]): The trend type series.
+            name (str): The key name for the output dictionary. Defaults to "trend_val".
+            prev_df (pd.DataFrame): The previous DataFrame state.
+            cur_row (dict[str, int | float]): The current row values.
+            
+        Returns:
+            dict[str, float]: A dictionary with the computed trend value.
+        """
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().stream_handler(
+            base_series=base_series,
+            upper_bound=upper_bound,
+            lower_bound=lower_bound,
+            upper_standard=upper_standard,
+            lower_standard=lower_standard,
+            trend_type=trend_type,
+            name=names[0],
+            prev_df=prev_df,
+            cur_row=cur_row
+        )
+
 class WindowMax(_WindowMax):
     """
     Calculates the rolling maximum over a specified window.
@@ -829,11 +1270,11 @@ class WindowMax(_WindowMax):
     name = "win_max"
     @classmethod
     def vector_endpoint(
-            cls, 
-            base_series:pd.Series, 
-            window:int,
-            name:Optional[str]=None
-        )->pd.DataFrame:
+        cls, 
+        base_series:pd.Series, 
+        window:int,
+        name:Optional[str]=None
+    )->pd.DataFrame:
         """
         Execute historical vectorized calculations for window maximum.
         
@@ -855,11 +1296,11 @@ class WindowMax(_WindowMax):
     
     @classmethod
     def stream_endpoint(
-            cls, 
-            base_series:pd.Series, 
-            window:int,
-            name:Optional[str]=None
-        )->dict[str, float]:
+        cls, 
+        base_series:pd.Series, 
+        window:int,
+        name:Optional[str]=None
+    )->dict[str, float]:
         """
         Compute the next step window maximum. Currently uses a tail calculation approach.
         
@@ -881,11 +1322,11 @@ class WindowMax(_WindowMax):
 
     @classmethod
     def tail(
-            cls, 
-            base_series:pd.Series, 
-            window:int,
-            name:Optional[str]=None
-        )->dict[str, float]:
+        cls, 
+        base_series:pd.Series, 
+        window:int,
+        name:Optional[str]=None
+    )->dict[str, float]:
         """
         Calculate the rolling maximum for the tail of a series.
         
@@ -904,6 +1345,38 @@ class WindowMax(_WindowMax):
             window=window,
             name=names[0]
         )
+
+    @classmethod
+    def stream_handler(
+        cls,
+        base_series:pd.Series,
+        window:int,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float],
+        name:Optional[str]=None,
+    )->dict[str, float]:
+        """
+        Process the next stream step window maximum using the previous DataFrame state.
+        
+        Args:
+            base_series (pd.Series[float]): The input series history.
+            window (int): The rolling window size.
+            name (str): The key name for the output dictionary. Defaults to "win_max".
+            prev_df (pd.DataFrame): The previous DataFrame state.
+            cur_row (dict[str, int | float]): The current row values.
+            
+        Returns:
+            dict[str, float]: A dictionary with the computed rolling maximum.
+        """
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().stream_handler(
+            base_series=base_series,
+            window=window,
+            name=names[0],
+            prev_df=prev_df,
+            cur_row=cur_row
+        )
     
 class WindowMin(_WindowMin):
     """
@@ -913,11 +1386,11 @@ class WindowMin(_WindowMin):
     name = "win_min"
     @classmethod
     def vector_endpoint(
-            cls,
-            base_series:pd.Series,
-            window:int,
-            name:Optional[str]=None
-        )->pd.DataFrame:
+        cls,
+        base_series:pd.Series,
+        window:int,
+        name:Optional[str]=None
+    )->pd.DataFrame:
         """
         Execute historical vectorized calculations for window minimum.
         
@@ -939,11 +1412,11 @@ class WindowMin(_WindowMin):
     
     @classmethod
     def stream_endpoint(
-            cls,
-            base_series:pd.Series,
-            window:int,
-            name:Optional[str]=None
-        )->dict[str, float]:
+        cls,
+        base_series:pd.Series,
+        window:int,
+        name:Optional[str]=None
+    )->dict[str, float]:
         """
         Compute the next step window minimum. Currently uses a tail calculation approach.
         
@@ -965,11 +1438,11 @@ class WindowMin(_WindowMin):
 
     @classmethod
     def tail(
-            cls, 
-            base_series:pd.Series, 
-            window:int, 
-            name:Optional[str]=None
-        )->dict[str, float]:
+        cls, 
+        base_series:pd.Series, 
+        window:int, 
+        name:Optional[str]=None
+    )->dict[str, float]:
         """
         Calculate the rolling minimum for the tail of a series.
         
@@ -988,6 +1461,38 @@ class WindowMin(_WindowMin):
             window=window,
             name=names[0]
         )
+
+    @classmethod
+    def stream_handler(
+        cls,
+        base_series:pd.Series,
+        window:int,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float],
+        name:Optional[str]=None,
+    )->dict[str, float]:
+        """
+        Process the next stream step window minimum using the previous DataFrame state.
+        
+        Args:
+            base_series (pd.Series[float]): The input series history.
+            window (int): The rolling window size.
+            name (str): The key name for the output dictionary. Defaults to "win_min".
+            prev_df (pd.DataFrame): The previous DataFrame state.
+            cur_row (dict[str, int | float]): The current row values.
+            
+        Returns:
+            dict[str, float]: A dictionary with the computed rolling minimum.
+        """
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().stream_handler(
+            base_series=base_series,
+            window=window,
+            name=names[0],
+            prev_df=prev_df,
+            cur_row=cur_row
+        )
     
 class Shift(_Shift):
     """
@@ -997,11 +1502,11 @@ class Shift(_Shift):
     name="shift"
     @classmethod
     def vector_endpoint(
-            cls, 
-            base_series:pd.Series, 
-            period:int,
-            name:Optional[str]=None
-        )->pd.DataFrame:
+        cls, 
+        base_series:pd.Series, 
+        period:int,
+        name:Optional[str]=None
+    )->pd.DataFrame:
         """
         Execute historical vectorized calculations for shifting a series.
         
@@ -1023,11 +1528,11 @@ class Shift(_Shift):
     
     @classmethod
     def stream_endpoint(
-            cls, 
-            base_series:pd.Series, 
-            period:int,
-            name:Optional[str]=None
-        )->dict[str, float]:
+        cls, 
+        base_series:pd.Series, 
+        period:int,
+        name:Optional[str]=None
+    )->dict[str, float]:
         """
         Compute the next step shifted value. Uses historical data to lookup the shifted value.
         
@@ -1048,12 +1553,44 @@ class Shift(_Shift):
         )
 
     @classmethod
+    def stream_handler(
+        cls,
+        base_series:pd.Series,
+        period:int,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float],
+        name:Optional[str]=None,
+    )->dict[str, float]:
+        """
+        Process the next stream step shifted value using the previous DataFrame state.
+        
+        Args:
+            base_series (pd.Series[float]): The input series history.
+            period (int): The number of steps to shift backward.
+            name (str): The key name for the output dictionary. Defaults to "shift".
+            prev_df (pd.DataFrame): The previous DataFrame state.
+            cur_row (dict[str, int | float]): The current row values.
+            
+        Returns:
+            dict[str, float]: A dictionary with the shifted value.
+        """
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().stream_handler(
+            base_series=base_series,
+            period=period,
+            name=names[0],
+            prev_df=prev_df,
+            cur_row=cur_row
+        )
+
+    @classmethod
     def tail(
-            cls, 
-            base_series:pd.Series,
-            period:int,
-            name:Optional[str]=None
-        )->dict[str, float]:
+        cls, 
+        base_series:pd.Series,
+        period:int,
+        name:Optional[str]=None
+    )->dict[str, float]:
         """
         Calculate the shifted value for the tail of a series.
         

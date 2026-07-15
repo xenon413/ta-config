@@ -11,7 +11,8 @@ from .core import (
     TrendVal,
     WindowMax,
     WindowMin,
-    Shift
+    Shift,
+    IndexConfig
 )
 
 __all__ = [
@@ -28,5 +29,5 @@ __all__ = [
     "WindowMax",
     "WindowMin",
     "Shift",
-    
+    "IndexConfig"
 ]

@@ -13,6 +13,7 @@ from .indicators import (
     WindowMin,
     Shift
 )
+from .schema import IndexConfig
 
 __all__ = [
     "SMACalc",
@@ -28,5 +29,5 @@ __all__ = [
     "WindowMax",
     "WindowMin",
     "Shift",
-    
+    "IndexConfig"
 ]

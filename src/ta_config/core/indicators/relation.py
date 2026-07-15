@@ -7,17 +7,17 @@ from .base_indicator import BaseIndicator
 class CrossType(BaseIndicator):
     @classmethod
     def vector_endpoint(
-            cls,
-            s1:pd.Series, 
-            s2:pd.Series, 
-            prev_s1:pd.Series,
-            prev_s2:pd.Series,
-            upper_bound:Optional[pd.Series], 
-            lower_bound:Optional[pd.Series], 
-            upper_standard:Optional[pd.Series],
-            lower_standard:Optional[pd.Series],
-            name:str
-        )->pd.DataFrame:
+        cls,
+        s1:pd.Series, 
+        s2:pd.Series, 
+        prev_s1:pd.Series,
+        prev_s2:pd.Series,
+        upper_bound:Optional[pd.Series], 
+        lower_bound:Optional[pd.Series], 
+        upper_standard:Optional[pd.Series],
+        lower_standard:Optional[pd.Series],
+        name:str
+    )->pd.DataFrame:
         # NOTE:
         # the standard and bound must be in the same units, 
         # and it's not required to be in the same unit as s1, s2
@@ -50,15 +50,15 @@ class CrossType(BaseIndicator):
     
     @classmethod
     def stream_endpoint(
-            cls,
-            cur_s1:float, cur_s2:float,
-            prev_s1:float, prev_s2:float,
-            cur_upper_bound:Optional[float],
-            cur_upper_standard:Optional[float],
-            cur_lower_bound:Optional[float],
-            cur_lower_standard:Optional[float],
-            name:str
-        )->dict[str, int]:
+        cls,
+        cur_s1:float, cur_s2:float,
+        prev_s1:float, prev_s2:float,
+        cur_upper_bound:Optional[float],
+        cur_upper_standard:Optional[float],
+        cur_lower_bound:Optional[float],
+        cur_lower_standard:Optional[float],
+        name:str
+    )->dict[str, int]:
         upper_standard = cur_upper_standard if cur_upper_standard is not None else cur_s2
         lower_standard = cur_lower_standard if cur_lower_standard is not None else cur_s1
         upper_bound = cur_upper_bound if cur_upper_bound is not None else cur_s1
@@ -74,20 +74,48 @@ class CrossType(BaseIndicator):
 
         return {name:res}
 
+    @classmethod
+    def stream_handler(
+        cls,
+        s1:pd.Series, 
+        s2:pd.Series, 
+        prev_s1:pd.Series,
+        prev_s2:pd.Series,
+        upper_bound:Optional[pd.Series], 
+        lower_bound:Optional[pd.Series], 
+        upper_standard:Optional[pd.Series],
+        lower_standard:Optional[pd.Series],
+        name:str,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float]
+    )->dict[str, float]:
+        kwargs = {
+            "cur_s1":cur_row[s1.name],
+            "cur_s2":cur_row[s2.name],
+            "prev_s1":prev_s1.iloc[-1],
+            "prev_s2":prev_s2.iloc[-1],
+            "cur_upper_bound":None if upper_bound is None else cur_row[upper_bound.name],
+            "cur_upper_standard":None if upper_standard is None else cur_row[upper_standard.name],
+            "cur_lower_bound":None if lower_bound is None else cur_row[lower_bound.name],
+            "cur_lower_standard":None if lower_standard is None else cur_row[lower_standard.name],
+            "name":name
+        }
+        return cls.stream_endpoint(**kwargs)
+
 class CrossVal(BaseIndicator):
     @classmethod
     def vector_endpoint(
-            cls,
-            s1:pd.Series,
-            s2:pd.Series,
-            base_series:pd.Series,
-            cross_type:pd.Series,
-            upper_bound:Optional[pd.Series], 
-            lower_bound:Optional[pd.Series], 
-            upper_standard:Optional[pd.Series],
-            lower_standard:Optional[pd.Series],
-            name:str
-        )->pd.DataFrame:
+        cls,
+        s1:pd.Series,
+        s2:pd.Series,
+        base_series:pd.Series,
+        cross_type:pd.Series,
+        upper_bound:Optional[pd.Series], 
+        lower_bound:Optional[pd.Series], 
+        upper_standard:Optional[pd.Series],
+        lower_standard:Optional[pd.Series],
+        name:str
+    )->pd.DataFrame:
         # upper standard usually the same as the lower standard
         upper_standard = upper_standard if upper_standard is not None else s2
         lower_standard = lower_standard if lower_standard is not None else s1
@@ -112,17 +140,17 @@ class CrossVal(BaseIndicator):
 
     @classmethod
     def stream_endpoint(
-            cls,
-            cur_s1:float,
-            cur_s2:float,
-            cur_base:float,
-            cur_cross_type:int,
-            cur_upper_bound:Optional[float],
-            cur_lower_bound:Optional[float],
-            cur_upper_standard:Optional[float],
-            cur_lower_standard:Optional[float],
-            name:str
-        )->dict[str, float]:
+        cls,
+        cur_s1:float,
+        cur_s2:float,
+        cur_base:float,
+        cur_cross_type:int,
+        cur_upper_bound:Optional[float],
+        cur_lower_bound:Optional[float],
+        cur_upper_standard:Optional[float],
+        cur_lower_standard:Optional[float],
+        name:str
+    )->dict[str, float]:
         
         cur_upper_standard = cur_upper_standard if cur_upper_standard is not None else cur_s2
         cur_lower_standard = cur_lower_standard if cur_lower_standard is not None else cur_s1
@@ -139,17 +167,45 @@ class CrossVal(BaseIndicator):
 
         return {name:res}
 
+    @classmethod
+    def stream_handler(
+        cls,
+        s1:pd.Series,
+        s2:pd.Series,
+        base_series:pd.Series,
+        cross_type:pd.Series,
+        upper_bound:Optional[pd.Series], 
+        lower_bound:Optional[pd.Series], 
+        upper_standard:Optional[pd.Series],
+        lower_standard:Optional[pd.Series],
+        name:str,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float]
+    )->dict[str, float]:
+        kwargs = {
+            "cur_s1":cur_row[s1.name],
+            "cur_s2":cur_row[s2.name],
+            "cur_base":cur_row[base_series.name],
+            "cur_cross_type":cur_row[cross_type.name],
+            "cur_upper_bound":None if upper_bound is None else cur_row[upper_bound.name],
+            "cur_upper_standard":None if upper_standard is None else cur_row[upper_standard.name],
+            "cur_lower_bound":None if lower_bound is None else cur_row[lower_bound.name],
+            "cur_lower_standard":None if lower_standard is None else cur_row[lower_standard.name],
+            "name":name
+        }
+        return cls.stream_endpoint(**kwargs)
+    
 class TrendType(BaseIndicator):
     @classmethod
     def vector_endpoint(
-            cls,
-            prev_base_series:pd.Series,
-            upper_bound:pd.Series,
-            lower_bound:pd.Series,
-            thresh:float,
-            trend_len:int,
-            name:str
-        )->pd.DataFrame:
+        cls,
+        prev_base_series:pd.Series,
+        upper_bound:pd.Series,
+        lower_bound:pd.Series,
+        thresh:float,
+        trend_len:int,
+        name:str
+    )->pd.DataFrame:
         long = upper_bound >= prev_base_series
         short = lower_bound < prev_base_series
         flat_upper = (upper_bound - prev_base_series).abs()/prev_base_series
@@ -181,14 +237,14 @@ class TrendType(BaseIndicator):
 
     @classmethod
     def tail(
-            cls,
-            prev_base_series:pd.Series,
-            upper_bound:pd.Series,
-            lower_bound:pd.Series,
-            thresh:float,
-            trend_len:int,
-            name:str
-        )->dict[str, int]:
+        cls,
+        prev_base_series:pd.Series,
+        upper_bound:pd.Series,
+        lower_bound:pd.Series,
+        thresh:float,
+        trend_len:int,
+        name:str
+    )->dict[str, int]:
         # trim everything to trend len
         upper_bound = upper_bound.tail(trend_len)
         lower_bound = lower_bound.tail(trend_len)
@@ -218,40 +274,52 @@ class TrendType(BaseIndicator):
 
     @classmethod
     def stream_endpoint(
-            cls,
-            prev_base_series:pd.Series,
-            upper_bound:pd.Series,
-            lower_bound:pd.Series,
-            thresh:float,
-            trend_len:int,
-            name:str
-        )->dict[str, int]:
-        prev_base_series:pd.Series[float]
-        upper_bound:pd.Series[float]
-        lower_bound:pd.Series[float]
+        cls,
+        prev_base_series:pd.Series,
+        upper_bound:pd.Series,
+        lower_bound:pd.Series,
+        thresh:float,
+        trend_len:int,
+        name:str
+    )->dict[str, int]:
         # NOTE: use tail endpoint for now 
         # TODO: write O(1) implementation
         return cls.tail(prev_base_series, upper_bound, lower_bound, thresh, trend_len, name)
     
+    @classmethod
+    def stream_handler(
+        cls,
+        prev_base_series:pd.Series,
+        upper_bound:pd.Series,
+        lower_bound:pd.Series,
+        thresh:float,
+        trend_len:int,
+        name:str,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float]
+    )->dict[str, int]:
+        kwargs = {
+            "prev_base_series":prev_base_series,
+            "upper_bound":upper_bound,
+            "lower_bound":lower_bound,
+            "thresh":thresh,
+            "trend_len":trend_len,
+            "name":name
+        }
+        return cls.stream_endpoint(**kwargs)
+    
 class TrendVal(BaseIndicator):
     @classmethod
     def vector_endpoint(
-            cls,
-            base_series:pd.Series,
-            upper_bound:pd.Series,
-            lower_bound:pd.Series,
-            upper_standard:pd.Series,
-            lower_standard:pd.Series,
-            trend_type:pd.Series,
-            name:str
-        )->pd.DataFrame:
-        upper_bound:pd.Series[float]
-        lower_bound:pd.Series[float]
-        upper_standard:pd.Series[float]
-        lower_standard:pd.Series[float]
-        trend_type:pd.Series[int]
-        base_series:pd.Series[float]
-
+        cls,
+        base_series:pd.Series,
+        upper_bound:pd.Series,
+        lower_bound:pd.Series,
+        upper_standard:pd.Series,
+        lower_standard:pd.Series,
+        trend_type:pd.Series,
+        name:str
+    )->pd.DataFrame:
         upper_val = np.where(lower_bound>upper_standard, base_series, upper_standard)
         upper_val = np.where(upper_bound<upper_standard, 0, upper_val)
 
@@ -268,15 +336,15 @@ class TrendVal(BaseIndicator):
     
     @classmethod
     def stream_endpoint(
-            cls,
-            cur_upper_bound:float,
-            cur_lower_bound:float,
-            cur_upper_standard:float,
-            cur_lower_standard:float,
-            cur_trend_type:int,
-            cur_base:float,
-            name:str
-        )->dict[str, float]:
+        cls,
+        cur_upper_bound:float,
+        cur_lower_bound:float,
+        cur_upper_standard:float,
+        cur_lower_standard:float,
+        cur_trend_type:int,
+        cur_base:float,
+        name:str
+    )->dict[str, float]:
         upper_val = cur_base if cur_lower_bound>cur_upper_standard else cur_upper_standard
         upper_val = 0 if cur_upper_bound<cur_upper_standard else upper_val
 
@@ -289,55 +357,163 @@ class TrendVal(BaseIndicator):
 
         return {name:res} 
     
+    @classmethod
+    def stream_handler(
+        cls,
+        base_series:pd.Series,
+        upper_bound:pd.Series,
+        lower_bound:pd.Series,
+        upper_standard:pd.Series,
+        lower_standard:pd.Series,
+        trend_type:pd.Series,
+        name:str,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float]
+    )->dict[str, float]:
+        kwargs = {
+            "cur_upper_bound":cur_row[upper_bound.name],
+            "cur_upper_standard":cur_row[upper_standard.name],
+            "cur_lower_bound":cur_row[lower_bound.name],
+            "cur_lower_standard":cur_row[lower_standard.name],
+            "cur_trend_type":cur_row[trend_type.name],
+            "cur_base":cur_row[base_series.name],
+            "name":name
+        }
+        return cls.stream_endpoint(**kwargs)
+    
 class WindowMax(BaseIndicator):
     @classmethod
-    def vector_endpoint(cls, base_series:pd.Series, window:int, name:str="win_max")->pd.DataFrame:
-        base_series:pd.Series[float]
+    def vector_endpoint(
+        cls, 
+        base_series:pd.Series, 
+        window:int, 
+        name:str
+    )->pd.DataFrame:
         return base_series.rolling(window).max().to_frame(name)
         
     @classmethod
-    def tail(cls, base_series:pd.Series, window:int, name:str)->dict[str, float]:
-        base_series:pd.Series[float]
+    def tail(
+        cls, 
+        base_series:pd.Series, 
+        window:int, 
+        name:str
+    )->dict[str, float]:
         return {name:base_series.tail(window).max()}
 
     @classmethod
-    def stream_endpoint(cls, base_series:pd.Series, window:int, name:str)->dict[str, float]:
+    def stream_endpoint(
+        cls, 
+        base_series:pd.Series, 
+        window:int, 
+        name:str
+    )->dict[str, float]:
         # NOTE: use tail endpoint for now 
         # TODO: write O(1) implementation
-        base_series:pd.Series[float]
         return cls.tail(base_series, window, name)
         
+    @classmethod
+    def stream_handler(
+        cls, 
+        base_series:pd.Series, 
+        window:int, 
+        name:str,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float]
+    )->dict[str, float]:
+        kwargs = {
+            "base_series":base_series,
+            "window":window,
+            "name":name
+        }
+        return cls.stream_endpoint(**kwargs)
+    
 class WindowMin(BaseIndicator):
     @classmethod
-    def vector_endpoint(cls, base_series:pd.Series, window:int, name:str="win_min")->pd.DataFrame:
-        base_series:pd.Series[float]
+    def vector_endpoint(
+        cls, 
+        base_series:pd.Series, 
+        window:int, 
+        name:str
+    )->pd.DataFrame:
         return base_series.rolling(window).min().to_frame(name)
     
     @classmethod
-    def tail(cls, base_series:pd.Series, window:int, name:str)->dict[str, float]:
-        base_series:pd.Series[float]
+    def tail(
+        cls, 
+        base_series:pd.Series, 
+        window:int, 
+        name:str
+    )->dict[str, float]:
         return {name:base_series.tail(window).min()}
     
     @classmethod
-    def stream_endpoint(cls, base_series:pd.Series, window:int, name:str)->dict[str, float]:
+    def stream_endpoint(
+        cls, 
+        base_series:pd.Series, 
+        window:int, 
+        name:str
+    )->dict[str, float]:
         # NOTE: use tail endpoint for now 
         # TODO: write O(1) implementation
-        base_series:pd.Series[float]
         return cls.tail(base_series, window, name)
 
+    @classmethod
+    def stream_handler(
+        cls, 
+        base_series:pd.Series, 
+        window:int, 
+        name:str,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float]
+    )->dict[str, float]:
+        kwargs = {
+            "base_series":base_series,
+            "window":window,
+            "name":name
+        }
+        return cls.stream_endpoint(**kwargs)
+    
 class Shift(BaseIndicator):
     @classmethod
-    def vector_endpoint(cls, base_series:pd.Series, period:int, name:str)->pd.DataFrame:
-        base_series:pd.Series[float]
+    def vector_endpoint(
+        cls, 
+        base_series:pd.Series, 
+        period:int, 
+        name:str
+    )->pd.DataFrame:
         return base_series.shift(period).to_frame(name)
     
     @classmethod
-    def tail(cls, base_series:pd.Series, period:int, name:str)->dict[str, float]:
-        base_series:pd.Series[float]
+    def tail(
+        cls, 
+        base_series:pd.Series, 
+        period:int, 
+        name:str
+    )->dict[str, float]:
         return {name:base_series.iloc[-(period+1)]}
     
     @classmethod
-    def stream_endpoint(cls, base_series:pd.Series, period:int, name:str)->dict[str, float]:
-        base_series:pd.Series[float]
+    def stream_endpoint(
+        cls, 
+        base_series:pd.Series, 
+        period:int, 
+        name:str
+    )->dict[str, float]:
         return cls.tail(base_series, period, name)
     
+
+    @classmethod
+    def stream_handler(
+        cls, 
+        base_series:pd.Series, 
+        period:int, 
+        name:str,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float]
+    )->dict[str, float]:
+        kwargs = {
+            "base_series":base_series,
+            "period":period,
+            "name":name
+        }
+        return cls.stream_endpoint(**kwargs)
