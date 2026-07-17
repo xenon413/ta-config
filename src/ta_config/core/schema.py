@@ -335,8 +335,33 @@ class IndexConfig(BaseModel):
 
         return df
     
-    # make it into stream update and stream rotate, let user decide when to use which
-    def stream_config(self, df:pd.DataFrame, row:dict)->pd.DataFrame:
+    def stream_update(self, df:pd.DataFrame, row:dict)->pd.DataFrame:
+        cur_df = df.copy()
+        prev_df = cur_df.iloc[:-1]
+        cur_row = row.copy()
+
+        for field_name, field_config in self.config_order:
+            field_name:str
+            field_config:BaseConfig
+
+            kwargs = field_config.model_dump(exclude_none=True)
+            indicator_cls = field_config.indicator_class
+            
+            # get columns
+            col_val:dict[str, pd.Series] = {
+                arg_name:prev_df[col_name] for arg_name, col_name in field_config.column_mapping().items()
+            }
+            kwargs.update(col_val)
+            kwargs |= {"name":field_name, "prev_df":prev_df, "cur_row":cur_row}
+            res = indicator_cls.stream_handler(**kwargs)
+            cur_row.update(res)
+
+            col_pos = [prev_df.columns.get_loc(col) for col in res]
+            cur_df.iloc[-1, col_pos] = list(res.values())
+        
+        return cur_df
+
+    def stream_rotate(self, df:pd.DataFrame, row:dict)->pd.DataFrame:
         prev_df = df.copy()
         cur_df = df.copy()
         cur_df.loc[len(df)] = None
@@ -356,6 +381,7 @@ class IndexConfig(BaseModel):
             kwargs.update(col_val)
             kwargs |= {"name":field_name, "prev_df":prev_df, "cur_row":cur_row}
             res = indicator_cls.stream_handler(**kwargs)
+            cur_row.update(res)
 
             col_pos = [cur_df.columns.get_loc(col) for col in res]
             cur_df.iloc[-1, col_pos] = list(res.values())

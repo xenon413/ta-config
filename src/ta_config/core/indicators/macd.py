@@ -56,4 +56,4 @@ class MACDCalc(BaseIndicator):
             "signal_name":signal_name,
             "hist_name":hist_name
         }
-        return cls.stream_endpoint(**kwargs)
+        return __class__.stream_endpoint(**kwargs)

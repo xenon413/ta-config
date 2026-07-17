@@ -123,51 +123,7 @@ def test_vector_config_with_dependency_chain(base_df:pd.DataFrame, index_config:
     pdt.assert_series_equal(res["macd_hist"], expected_macd["macd_hist"], check_names=False)
 
 
-@pytest.mark.unit
-def test_stream_config_with_dependency_chain(base_df:pd.DataFrame, index_config:IndexConfig):
-    prev_df = pd.DataFrame(
-        {
-            "open": [10.0, 11.0],
-            "high": [11.0, 12.0],
-            "low": [9.0, 10.0],
-            "close": [10.0, 12.0],
-            "sma_short": [10.0, 11.0],
-            "sma_long": [10.0, 11.0],
-            "prev_sma_short": [10.0, 10.0],
-            "prev_sma_long": [10.0, 10.0],
-            "cross_type": [0, 0],
-            "cross_val": [0.0, 0.0],
-            "ema_fast": [10.0, 11.0],
-            "ema_slow": [10.0, 11.0],
-            "macd": [0.0, 0.0],
-            "macd_signal": [0.0, 0.0],
-            "macd_hist": [0.0, 0.0],
-        }
-    )
-    row = {
-        "open": 13.0,
-        "high": 14.0,
-        "low": 12.0,
-        "close": 14.0,
-    }
-
-    res = index_config.stream_config(prev_df, row)
-
-    expected_columns = [
-        "sma_short",
-        "sma_long",
-        "prev_sma_short",
-        "prev_sma_long",
-        "cross_type",
-        "cross_val",
-        "ema_fast",
-        "ema_slow",
-        "macd",
-        "macd_signal",
-        "macd_hist",
-    ]
-    assert expected_columns[0] in res.columns
-
+def _expected_stream_result(prev_df:pd.DataFrame, row:dict[str, float])->pd.Series:
     expected_sma_short = SMACalc.stream_endpoint(
         prev_sma=prev_df["sma_short"].iloc[-1],
         prev_base=prev_df["close"].iloc[-1],
@@ -233,12 +189,10 @@ def test_stream_config_with_dependency_chain(base_df:pd.DataFrame, index_config:
         cur_slow_ema=expected_ema_slow,
         signal=2,
         prev_signal_line=prev_df["macd_signal"].iloc[-1],
-        name="macd",
-        signal_name="macd_signal",
-        hist_name="macd_hist",
+        name="macd"
     )
 
-    expected = pd.Series(
+    return pd.Series(
         {
             "sma_short": expected_sma_short,
             "sma_long": expected_sma_long,
@@ -253,6 +207,75 @@ def test_stream_config_with_dependency_chain(base_df:pd.DataFrame, index_config:
             "macd_hist": expected_macd["macd_hist"],
         }
     )
+
+
+@pytest.mark.unit
+def test_stream_update_with_dependency_chain(index_config:IndexConfig):
+    history_df = pd.DataFrame(
+        {
+            "open": [10.0, 11.0],
+            "high": [11.0, 12.0],
+            "low": [9.0, 10.0],
+            "close": [10.0, 12.0],
+            "sma_short": [10.0, 11.0],
+            "sma_long": [10.0, 11.0],
+            "prev_sma_short": [10.0, 10.0],
+            "prev_sma_long": [10.0, 10.0],
+            "cross_type": [0, 0],
+            "cross_val": [0.0, 0.0],
+            "ema_fast": [10.0, 11.0],
+            "ema_slow": [10.0, 11.0],
+            "macd": [0.0, 0.0],
+            "macd_signal": [0.0, 0.0],
+            "macd_hist": [0.0, 0.0],
+        }
+    )
+    update_df = history_df.copy()
+    update_df.loc[len(update_df)] = 0.0
+    row = {
+        "open": 13.0,
+        "high": 14.0,
+        "low": 12.0,
+        "close": 14.0,
+    }
+
+    res = index_config.stream_update(update_df, row)
+    expected = _expected_stream_result(update_df.iloc[:-1], row)
+
+    result = res.iloc[-1][expected.index]
+    pdt.assert_series_equal(result, expected, check_names=False)
+
+
+@pytest.mark.unit
+def test_stream_rotate_with_dependency_chain(index_config:IndexConfig):
+    history_df = pd.DataFrame(
+        {
+            "open": [10.0, 11.0],
+            "high": [11.0, 12.0],
+            "low": [9.0, 10.0],
+            "close": [10.0, 12.0],
+            "sma_short": [10.0, 11.0],
+            "sma_long": [10.0, 11.0],
+            "prev_sma_short": [10.0, 10.0],
+            "prev_sma_long": [10.0, 10.0],
+            "cross_type": [0, 0],
+            "cross_val": [0.0, 0.0],
+            "ema_fast": [10.0, 11.0],
+            "ema_slow": [10.0, 11.0],
+            "macd": [0.0, 0.0],
+            "macd_signal": [0.0, 0.0],
+            "macd_hist": [0.0, 0.0],
+        }
+    )
+    row = {
+        "open": 13.0,
+        "high": 14.0,
+        "low": 12.0,
+        "close": 14.0,
+    }
+
+    res = index_config.stream_rotate(history_df, row)
+    expected = _expected_stream_result(history_df, row)
 
     result = res.iloc[-1][expected.index]
     pdt.assert_series_equal(result, expected, check_names=False)
