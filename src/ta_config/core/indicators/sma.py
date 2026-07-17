@@ -49,7 +49,7 @@ class SMACalc(BaseIndicator):
             "window":window,
             "name":name
         }
-        return cls.stream_endpoint(**kwargs)
+        return __class__.stream_endpoint(**kwargs)
         
 class SMA2SMACrossStandard(BaseIndicator):
     @classmethod
@@ -107,7 +107,7 @@ class SMA2SMACrossStandard(BaseIndicator):
             "window2":window2,
             "name":name
         }
-        return cls.stream_endpoint(**kwargs)
+        return __class__.stream_endpoint(**kwargs)
     
 class SMATrendMaintVal(BaseIndicator):
     @classmethod
@@ -150,7 +150,7 @@ class SMATrendMaintVal(BaseIndicator):
             "window":window,
             "name":name,
         }
-        return cls.stream_endpoint(**params)
+        return __class__.stream_endpoint(**params)
 
 class SMAadjust(BaseIndicator):
     @classmethod
@@ -190,4 +190,4 @@ class SMAadjust(BaseIndicator):
             "window":window,
             "name":name
         }
-        return cls.stream_endpoint(**kwargs)
+        return __class__.stream_endpoint(**kwargs)

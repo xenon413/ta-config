@@ -100,7 +100,7 @@ class CrossType(BaseIndicator):
             "cur_lower_standard":None if lower_standard is None else cur_row[lower_standard.name],
             "name":name
         }
-        return cls.stream_endpoint(**kwargs)
+        return __class__.stream_endpoint(**kwargs)
 
 class CrossVal(BaseIndicator):
     @classmethod
@@ -193,7 +193,7 @@ class CrossVal(BaseIndicator):
             "cur_lower_standard":None if lower_standard is None else cur_row[lower_standard.name],
             "name":name
         }
-        return cls.stream_endpoint(**kwargs)
+        return __class__.stream_endpoint(**kwargs)
     
 class TrendType(BaseIndicator):
     @classmethod
@@ -306,7 +306,7 @@ class TrendType(BaseIndicator):
             "trend_len":trend_len,
             "name":name
         }
-        return cls.stream_endpoint(**kwargs)
+        return __class__.stream_endpoint(**kwargs)
     
 class TrendVal(BaseIndicator):
     @classmethod
@@ -379,7 +379,7 @@ class TrendVal(BaseIndicator):
             "cur_base":cur_row[base_series.name],
             "name":name
         }
-        return cls.stream_endpoint(**kwargs)
+        return __class__.stream_endpoint(**kwargs)
     
 class WindowMax(BaseIndicator):
     @classmethod
@@ -425,7 +425,7 @@ class WindowMax(BaseIndicator):
             "window":window,
             "name":name
         }
-        return cls.stream_endpoint(**kwargs)
+        return __class__.stream_endpoint(**kwargs)
     
 class WindowMin(BaseIndicator):
     @classmethod
@@ -471,7 +471,7 @@ class WindowMin(BaseIndicator):
             "window":window,
             "name":name
         }
-        return cls.stream_endpoint(**kwargs)
+        return __class__.stream_endpoint(**kwargs)
     
 class Shift(BaseIndicator):
     @classmethod
@@ -516,4 +516,4 @@ class Shift(BaseIndicator):
             "period":period,
             "name":name
         }
-        return cls.stream_endpoint(**kwargs)
+        return __class__.stream_endpoint(**kwargs)

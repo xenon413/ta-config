@@ -48,4 +48,4 @@ class EMACalc(BaseIndicator):
             "smoothing":smoothing,
             "name":name
         }
-        return cls.stream_endpoint(**params)
+        return __class__.stream_endpoint(**params)
