@@ -54,3 +54,35 @@ def test_macd_calc_mock():
     assert np.isclose(res_stream[name], expected_cur_macd)
     assert np.isclose(res_stream[f"{name}_signal"], expected_cur_signal)
     assert np.isclose(res_stream[f"{name}_hist"], expected_cur_hist)
+
+ATOL = 0.11
+
+@pytest.mark.unit
+def test_macd_calc_with_csv(sample_df, warm_up_df):
+    """Verify MACDCalc against the precalculated macd for 2026-06-13."""
+    combined_df = pd.concat([warm_up_df, sample_df], ignore_index=True)
+
+    res_12 = EMACalc.vector_endpoint(base_series=combined_df["close"], window=12, name="ema_12")
+    res_26 = EMACalc.vector_endpoint(base_series=combined_df["close"], window=26, name="ema_26")
+    
+    res_macd = MACDCalc.vector_endpoint(
+        fast_ema=res_12["ema_12"],
+        slow_ema=res_26["ema_26"],
+        signal=9,
+        name="macd_12_26_9"
+    )
+
+    target_slice = slice(len(warm_up_df), len(warm_up_df) + len(sample_df))
+    
+    calc_macd = res_macd["macd_12_26_9"].iloc[target_slice].reset_index(drop=True).round(1)
+    calc_signal = res_macd["macd_12_26_9_signal"].iloc[target_slice].reset_index(drop=True).round(1)
+    calc_hist = res_macd["macd_12_26_9_hist"].iloc[target_slice].reset_index(drop=True).round(1)
+    
+    expected_macd = sample_df["macd_12_26_9"]
+    expected_signal = sample_df["macd_signal_12_26_9"]
+    expected_hist = sample_df["macd_hist_12_26_9"]
+
+    mask = calc_macd.notna()
+    pdt.assert_series_equal(calc_macd[mask], expected_macd[mask], check_names=False, atol=ATOL)
+    pdt.assert_series_equal(calc_signal[mask], expected_signal[mask], check_names=False, atol=ATOL)
+    pdt.assert_series_equal(calc_hist[mask], expected_hist[mask], check_names=False, atol=ATOL)

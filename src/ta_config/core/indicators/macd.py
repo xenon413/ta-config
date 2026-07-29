@@ -1,10 +1,15 @@
 import pandas as pd
+import logging
 
+from ..helper import log_lifecycle
 from .base_indicator import BaseIndicator
 from .ema import EMACalc
 
+logger = logging.getLogger(__name__)
+
 class MACDCalc(BaseIndicator):
     @classmethod
+    @log_lifecycle(logger)
     def vector_endpoint(
         cls, 
         fast_ema:pd.Series, 
@@ -20,6 +25,7 @@ class MACDCalc(BaseIndicator):
         return pd.DataFrame({name:macd_line, signal_name:signal_line, hist_name:macd_hist})
 
     @classmethod
+    @log_lifecycle(logger)
     def stream_endpoint(
         cls,
         cur_fast_ema:float, 
@@ -36,6 +42,7 @@ class MACDCalc(BaseIndicator):
         return {name:cur_macd, signal_name:cur_signal, hist_name:cur_hist}
     
     @classmethod
+    @log_lifecycle(logger)
     def stream_handler(
         cls, 
         fast_ema:pd.Series, 

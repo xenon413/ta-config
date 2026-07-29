@@ -1,8 +1,14 @@
 import pandas as pd
+import logging
+
+from ..helper import log_lifecycle
 from .base_indicator import BaseIndicator
+
+logger = logging.getLogger(__name__)
 
 class EMACalc(BaseIndicator):
     @classmethod
+    @log_lifecycle(logger)
     def vector_endpoint(
         cls, 
         base_series:pd.Series,
@@ -17,6 +23,7 @@ class EMACalc(BaseIndicator):
         return base_series.ewm(alpha=alpha, adjust=False).mean().to_frame(name)
     
     @classmethod
+    @log_lifecycle(logger)
     def stream_endpoint(
         cls, 
         prev_ema:float, 
@@ -32,6 +39,7 @@ class EMACalc(BaseIndicator):
         return {name:(cur_base * alpha) + (prev_ema * (1 - alpha))}
     
     @classmethod
+    @log_lifecycle(logger)
     def stream_handler(
         cls, 
         base_series:pd.Series,

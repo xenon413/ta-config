@@ -10,23 +10,9 @@ from ta_config.core.indicators import (
     SMA2SMACrossStandard
 )
 
-DAY_PATH = r"tests\data\binance_kline\btcusdc_1m_future_2026_06_13.csv"
-WARM_UP_PATH = r"tests\data\binance_kline\btcusdc_1m_future_2026_06_12_warm_up.csv"
-
-@pytest.fixture(scope="module")
-def sample_df():
-    """Load the provided sample data for CSV verification"""
-    return pd.read_csv(DAY_PATH)
-
-
-@pytest.fixture(scope="module")
-def warm_up_df():
-    """Load the warm-up data used to seed rolling indicators."""
-    return pd.read_csv(WARM_UP_PATH)
-
 @pytest.mark.unit
 def test_sma_calc_with_csv(sample_df, warm_up_df):
-    """Verify SMACalc against the precalculated sma25 and sma320 for 2026-06-13."""
+    """Verify SMACalc against the precalculated sma_25 and sma_320 for 2026-06-13."""
     combined_df = pd.concat([warm_up_df, sample_df], ignore_index=True)
 
     # Calculate using the full warm-up + target-day history so the rolling
@@ -39,8 +25,8 @@ def test_sma_calc_with_csv(sample_df, warm_up_df):
     target_slice = slice(len(warm_up_df), len(warm_up_df) + len(sample_df))
     calc_sma25 = res_25["my_sma25"].iloc[target_slice].reset_index(drop=True).round(1)
     calc_sma320 = res_320["my_sma320"].iloc[target_slice].reset_index(drop=True).round(1)
-    expected_sma25 = sample_df["sma25"].reset_index(drop=True)
-    expected_sma320 = sample_df["sma320"].reset_index(drop=True)
+    expected_sma25 = sample_df["sma_25"]
+    expected_sma320 = sample_df["sma_320"]
 
     # Rolling mean has NaN for the first `window-1` rows, filter them out before comparing
     mask_25 = calc_sma25.notna()

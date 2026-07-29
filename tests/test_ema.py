@@ -35,3 +35,26 @@ def test_ema_calc_mock():
     )
     
     assert res_stream["test_ema"] == 22.5
+
+ATOL = 0.11
+
+@pytest.mark.unit
+def test_ema_calc_with_csv(sample_df, warm_up_df):
+    """Verify EMACalc against the precalculated ema_12 and ema_26 for 2026-06-13."""
+    combined_df = pd.concat([warm_up_df, sample_df], ignore_index=True)
+
+    res_12 = EMACalc.vector_endpoint(base_series=combined_df["close"], window=12, name="ema_12")
+    res_26 = EMACalc.vector_endpoint(base_series=combined_df["close"], window=26, name="ema_26")
+    
+    target_slice = slice(len(warm_up_df), len(warm_up_df) + len(sample_df))
+    calc_ema12 = res_12["ema_12"].iloc[target_slice].reset_index(drop=True).round(1)
+    calc_ema26 = res_26["ema_26"].iloc[target_slice].reset_index(drop=True).round(1)
+    
+    expected_ema12 = sample_df["ema_12"]
+    expected_ema26 = sample_df["ema_26"]
+
+    mask_12 = calc_ema12.notna()
+    pdt.assert_series_equal(calc_ema12[mask_12], expected_ema12[mask_12], check_names=False, atol=ATOL)
+
+    mask_26 = calc_ema26.notna()
+    pdt.assert_series_equal(calc_ema26[mask_26], expected_ema26[mask_26], check_names=False, atol=ATOL)

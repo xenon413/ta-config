@@ -1,19 +1,25 @@
 import pandas as pd
 from typing import Optional
+import logging
 
+from ..helper import log_lifecycle
 from .base_indicator import BaseIndicator
+
+logger = logging.getLogger(__name__)
 
 class SMACalc(BaseIndicator):
     @classmethod
+    @log_lifecycle(logger)
     def vector_endpoint(
         cls,
         base_series:pd.Series, 
-        window:int, 
+        window:int,
         name:str
     )->pd.DataFrame:
         return base_series.rolling(window).mean().to_frame(name)
     
     @classmethod
+    @log_lifecycle(logger)
     def stream_endpoint(
         cls,
         prev_sma:float, 
@@ -25,6 +31,7 @@ class SMACalc(BaseIndicator):
         return {name:(prev_sma + (cur_base - prev_base) / window)}
 
     @classmethod
+    @log_lifecycle(logger)
     def tail(
         cls, 
         base_series:pd.Series, 
@@ -34,6 +41,7 @@ class SMACalc(BaseIndicator):
         return {name:base_series.tail(window).mean()}
     
     @classmethod
+    @log_lifecycle(logger)
     def stream_handler(
         cls,
         base_series:pd.Series,
@@ -53,6 +61,7 @@ class SMACalc(BaseIndicator):
         
 class SMA2SMACrossStandard(BaseIndicator):
     @classmethod
+    @log_lifecycle(logger)
     def vector_endpoint(
         cls,
         base_series:pd.Series, 
@@ -71,6 +80,7 @@ class SMA2SMACrossStandard(BaseIndicator):
         return (base_series+dx).to_frame(name)
 
     @classmethod
+    @log_lifecycle(logger)
     def stream_endpoint(
             cls,
             cur_base: float, 
@@ -88,6 +98,7 @@ class SMA2SMACrossStandard(BaseIndicator):
         return {name:(cur_base + dx)}
 
     @classmethod
+    @log_lifecycle(logger)
     def stream_handler(
         cls,
         base_series:pd.Series, 
@@ -111,6 +122,7 @@ class SMA2SMACrossStandard(BaseIndicator):
     
 class SMATrendMaintVal(BaseIndicator):
     @classmethod
+    @log_lifecycle(logger)
     def vector_endpoint(
         cls,
         base_series:pd.Series,
@@ -122,6 +134,7 @@ class SMATrendMaintVal(BaseIndicator):
         return (base_series+window*(prev_sma-sma)).to_frame(name)
 
     @classmethod
+    @log_lifecycle(logger)
     def stream_endpoint(
         cls,
         cur_base:float,
@@ -133,6 +146,7 @@ class SMATrendMaintVal(BaseIndicator):
         return {name:(cur_base + window*(prev_sma-cur_sma))} 
 
     @classmethod
+    @log_lifecycle(logger)
     def stream_handler(
         cls,
         base_series:pd.Series,
@@ -154,6 +168,7 @@ class SMATrendMaintVal(BaseIndicator):
 
 class SMAadjust(BaseIndicator):
     @classmethod
+    @log_lifecycle(logger)
     def vector_endpoint(
         cls,
         base_series:pd.Series, 
@@ -165,6 +180,7 @@ class SMAadjust(BaseIndicator):
         return (base_series+adjustment).to_frame(name)
 
     @classmethod
+    @log_lifecycle(logger)
     def stream_endpoint(
         cls, 
         cur_base:float, 
@@ -175,6 +191,7 @@ class SMAadjust(BaseIndicator):
         return {name:(cur_base+(cur_adj-cur_base)/window)}
 
     @classmethod
+    @log_lifecycle(logger)
     def stream_handler(
         cls,
         base_series:pd.Series, 

@@ -486,7 +486,7 @@ class EMACalc(_EMACalc):
         window:int, 
         smoothing:Optional[float]=None,
         name:Optional[str]=None
-    )->pd.Series:
+    )->pd.DataFrame:
         """
         Execute historical vectorized matrix calculations for EMA.
         

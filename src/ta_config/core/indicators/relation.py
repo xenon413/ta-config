@@ -1,11 +1,16 @@
 import pandas as pd
 import numpy as np
+import logging
 from typing import Optional
 
+from ..helper import log_lifecycle
 from .base_indicator import BaseIndicator
+
+logger = logging.getLogger(__name__)
 
 class CrossType(BaseIndicator):
     @classmethod
+    @log_lifecycle(logger)
     def vector_endpoint(
         cls,
         s1:pd.Series, 
@@ -49,6 +54,7 @@ class CrossType(BaseIndicator):
         return res.fillna(0).astype(int).to_frame(name)
     
     @classmethod
+    @log_lifecycle(logger)
     def stream_endpoint(
         cls,
         cur_s1:float, cur_s2:float,
@@ -75,6 +81,7 @@ class CrossType(BaseIndicator):
         return {name:res}
 
     @classmethod
+    @log_lifecycle(logger)
     def stream_handler(
         cls,
         s1:pd.Series, 
@@ -104,6 +111,7 @@ class CrossType(BaseIndicator):
 
 class CrossVal(BaseIndicator):
     @classmethod
+    @log_lifecycle(logger)
     def vector_endpoint(
         cls,
         s1:pd.Series,
@@ -139,6 +147,7 @@ class CrossVal(BaseIndicator):
         return res.to_frame(name)
 
     @classmethod
+    @log_lifecycle(logger)
     def stream_endpoint(
         cls,
         cur_s1:float,
@@ -168,6 +177,7 @@ class CrossVal(BaseIndicator):
         return {name:res}
 
     @classmethod
+    @log_lifecycle(logger)
     def stream_handler(
         cls,
         s1:pd.Series,
@@ -197,6 +207,7 @@ class CrossVal(BaseIndicator):
     
 class TrendType(BaseIndicator):
     @classmethod
+    @log_lifecycle(logger)
     def vector_endpoint(
         cls,
         prev_base_series:pd.Series,
@@ -236,6 +247,7 @@ class TrendType(BaseIndicator):
         return res.to_frame(name)
 
     @classmethod
+    @log_lifecycle(logger)
     def tail(
         cls,
         prev_base_series:pd.Series,
@@ -273,6 +285,7 @@ class TrendType(BaseIndicator):
         return {name:res}
 
     @classmethod
+    @log_lifecycle(logger)
     def stream_endpoint(
         cls,
         prev_base_series:pd.Series,
@@ -287,6 +300,7 @@ class TrendType(BaseIndicator):
         return cls.tail(prev_base_series, upper_bound, lower_bound, thresh, trend_len, name)
     
     @classmethod
+    @log_lifecycle(logger)
     def stream_handler(
         cls,
         prev_base_series:pd.Series,
@@ -310,6 +324,7 @@ class TrendType(BaseIndicator):
     
 class TrendVal(BaseIndicator):
     @classmethod
+    @log_lifecycle(logger)
     def vector_endpoint(
         cls,
         base_series:pd.Series,
@@ -335,6 +350,7 @@ class TrendVal(BaseIndicator):
         return res.to_frame(name)
     
     @classmethod
+    @log_lifecycle(logger)
     def stream_endpoint(
         cls,
         cur_upper_bound:float,
@@ -358,6 +374,7 @@ class TrendVal(BaseIndicator):
         return {name:res} 
     
     @classmethod
+    @log_lifecycle(logger)
     def stream_handler(
         cls,
         base_series:pd.Series,
@@ -383,6 +400,7 @@ class TrendVal(BaseIndicator):
     
 class WindowMax(BaseIndicator):
     @classmethod
+    @log_lifecycle(logger)
     def vector_endpoint(
         cls, 
         base_series:pd.Series, 
@@ -392,6 +410,7 @@ class WindowMax(BaseIndicator):
         return base_series.rolling(window).max().to_frame(name)
         
     @classmethod
+    @log_lifecycle(logger)
     def tail(
         cls, 
         base_series:pd.Series, 
@@ -401,6 +420,7 @@ class WindowMax(BaseIndicator):
         return {name:base_series.tail(window).max()}
 
     @classmethod
+    @log_lifecycle(logger)
     def stream_endpoint(
         cls, 
         base_series:pd.Series, 
@@ -412,6 +432,7 @@ class WindowMax(BaseIndicator):
         return cls.tail(base_series, window, name)
         
     @classmethod
+    @log_lifecycle(logger)
     def stream_handler(
         cls, 
         base_series:pd.Series, 
@@ -429,6 +450,7 @@ class WindowMax(BaseIndicator):
     
 class WindowMin(BaseIndicator):
     @classmethod
+    @log_lifecycle(logger)
     def vector_endpoint(
         cls, 
         base_series:pd.Series, 
@@ -438,6 +460,7 @@ class WindowMin(BaseIndicator):
         return base_series.rolling(window).min().to_frame(name)
     
     @classmethod
+    @log_lifecycle(logger)
     def tail(
         cls, 
         base_series:pd.Series, 
@@ -447,6 +470,7 @@ class WindowMin(BaseIndicator):
         return {name:base_series.tail(window).min()}
     
     @classmethod
+    @log_lifecycle(logger)
     def stream_endpoint(
         cls, 
         base_series:pd.Series, 
@@ -458,6 +482,7 @@ class WindowMin(BaseIndicator):
         return cls.tail(base_series, window, name)
 
     @classmethod
+    @log_lifecycle(logger)
     def stream_handler(
         cls, 
         base_series:pd.Series, 
@@ -475,6 +500,7 @@ class WindowMin(BaseIndicator):
     
 class Shift(BaseIndicator):
     @classmethod
+    @log_lifecycle(logger)
     def vector_endpoint(
         cls, 
         base_series:pd.Series, 
@@ -484,6 +510,7 @@ class Shift(BaseIndicator):
         return base_series.shift(period).to_frame(name)
     
     @classmethod
+    @log_lifecycle(logger)
     def tail(
         cls, 
         base_series:pd.Series, 
@@ -493,6 +520,7 @@ class Shift(BaseIndicator):
         return {name:base_series.iloc[-(period+1)]}
     
     @classmethod
+    @log_lifecycle(logger)
     def stream_endpoint(
         cls, 
         base_series:pd.Series, 
@@ -501,8 +529,8 @@ class Shift(BaseIndicator):
     )->dict[str, float]:
         return cls.tail(base_series, period, name)
     
-
     @classmethod
+    @log_lifecycle(logger)
     def stream_handler(
         cls, 
         base_series:pd.Series, 
