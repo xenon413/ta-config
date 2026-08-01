@@ -147,7 +147,7 @@ To maintain the trend (where $\Delta \text{SMA} = 0$), the maintenance price is 
 $$P_{maint} = c_1 + n({}_{pre}\text{SMA}_{n} - \text{SMA}_{n})$$
 
 ### Trend Logic and Execution
-The trend is considered "confirmed" if the simple trend direction has been consistent for a window of $L$ periods (where $L = \text{TREND\_LEN}$).
+The trend is considered "confirmed" if the simple trend direction has been consistent for a window of $L$ periods (where $L = \mathtt{TREND\_LEN}$).
 
 #### Intra-Candle Trend Execution
 For simulation accuracy, if a trend is active ($res = 1$ for Long or $-1$ for Short), the execution price is determined by whether the market "gapped" beyond the maintenance price:
