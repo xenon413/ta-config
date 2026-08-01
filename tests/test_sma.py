@@ -34,6 +34,7 @@ def test_sma_calc_with_csv(sample_df, warm_up_df):
         calc_sma25[mask_25],
         expected_sma25[mask_25],
         check_names=False,
+        # check_exact=True
     )
 
     mask_320 = calc_sma320.notna()
@@ -41,6 +42,7 @@ def test_sma_calc_with_csv(sample_df, warm_up_df):
         calc_sma320[mask_320],
         expected_sma320[mask_320],
         check_names=False,
+        # check_exact=True
     )
 
 @pytest.mark.unit

@@ -21,7 +21,7 @@ def test_ema_calc_mock():
     expected = pd.Series([10.0, 15.0, 22.5], name="test_ema")
     
     res_vec = EMACalc.vector_endpoint(base_series=base, window=window, smoothing=smoothing, name="test_ema")
-    pdt.assert_series_equal(res_vec["test_ema"], expected)
+    pdt.assert_series_equal(res_vec["test_ema"], expected, check_exact=True)
     
     # 2. stream_endpoint
     # Testing the O(1) step: cur_base = 30.0, prev_ema = 15.0
@@ -55,6 +55,8 @@ def test_ema_calc_with_csv(sample_df, warm_up_df):
 
     mask_12 = calc_ema12.notna()
     pdt.assert_series_equal(calc_ema12[mask_12], expected_ema12[mask_12], check_names=False, atol=ATOL)
+    # pdt.assert_series_equal(calc_ema12[mask_12], expected_ema12[mask_12], check_names=False, check_exact=True)
 
     mask_26 = calc_ema26.notna()
     pdt.assert_series_equal(calc_ema26[mask_26], expected_ema26[mask_26], check_names=False, atol=ATOL)
+    # pdt.assert_series_equal(calc_ema26[mask_26], expected_ema26[mask_26], check_names=False, check_exact=True)
