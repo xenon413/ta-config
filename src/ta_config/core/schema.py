@@ -252,7 +252,10 @@ class ShiftConfig(_ShiftColumn):
     )
 
 class IndexConfig(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid"
+    )
 
     sma_calc:Optional[dict[str, SMACalcConfig]] = None
     sma_trend:Optional[dict[str, SMATrendMaintValConfig]] = None
