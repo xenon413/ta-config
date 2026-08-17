@@ -545,3 +545,45 @@ class Shift(BaseIndicator):
             "name":name
         }
         return __class__.stream_endpoint(**kwargs)
+
+class RelativePosition(BaseIndicator):
+    @classmethod
+    @log_lifecycle(logger)
+    def vector_endpoint(
+        cls, 
+        s1:pd.Series, 
+        s2:pd.Series, 
+        name:str
+    )->pd.DataFrame:
+        result = (s1 > s2).astype("int8") - (s1 < s2).astype("int8")
+        return result.to_frame(name)
+    
+    @classmethod
+    @log_lifecycle(logger)
+    def stream_endpoint(
+        cls, 
+        cur_s1:float, 
+        cur_s2:float, 
+        name:str
+    )->dict[str, int]:
+        res = 0
+        res = 1 if cur_s1 > cur_s2 else res
+        res = -1 if cur_s1 < cur_s2 else res
+        return {name:res}
+    
+    @classmethod
+    @log_lifecycle(logger)
+    def stream_handler(
+        cls, 
+        s1:pd.Series, 
+        s2:pd.Series, 
+        name:str,
+        prev_df:pd.DataFrame,
+        cur_row:dict[str, int|float]
+    )->dict[str, int]:
+        kwargs = {
+            "cur_s1":cur_row[s1.name],
+            "cur_s2":cur_row[s2.name],
+            "name":name
+        }
+        return __class__.stream_endpoint(**kwargs)

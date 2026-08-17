@@ -20,7 +20,8 @@ from .relation import (
     TrendVal as _TrendVal,
     WindowMax as _WindowMax,
     WindowMin as _WindowMin,
-    Shift as _Shift
+    Shift as _Shift,
+    RelativePosition as _RelativePosition
 )
 
 # ---- from .sma ----
@@ -1609,6 +1610,97 @@ class Shift(_Shift):
             period=period,
             name=names[0]
         )
+
+class RelativePosition(_RelativePosition):
+    """
+    Evaluates the relative position between two series.
+    Returns 1 if s1 > s2, -1 if s1 < s2, and 0 if equal.
+    """
+
+    name = "relative_pos"
+    @classmethod
+    def vector_endpoint(
+        cls, 
+        s1:pd.Series, 
+        s2:pd.Series, 
+        name:Optional[str]=None
+    )->pd.DataFrame:
+        """
+        Execute historical vectorized calculations for determining relative positions.
+        
+        Args:
+            s1 (pd.Series[float]): The first series.
+            s2 (pd.Series[float]): The second series.
+            name (str): The column name for the output DataFrame. Defaults to "relative_pos".
+            
+        Returns:
+            pd.DataFrame: A DataFrame containing the integer relative position identifiers.
+        """
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().vector_endpoint(
+            s1=s1,
+            s2=s2,
+            name=names[0]
+        )
+    
+    @classmethod
+    def stream_endpoint(
+        cls,
+        cur_s1:float,
+        cur_s2:float,
+        name:Optional[str]=None
+    )->dict[str, int]:
+        """
+        Compute the next step relative position using O(1) boolean logic.
+        
+        Args:
+            cur_s1 (float): The current first series value.
+            cur_s2 (float): The current second series value.
+            name (str): The key name for the output dictionary. Defaults to "relative_pos".
+            
+        Returns:
+            dict[str, int]: A dictionary with the computed relative position (1, -1, or 0).
+        """
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().stream_endpoint(
+            cur_s1=cur_s1,
+            cur_s2=cur_s2,
+            name=names[0]
+        )
+
+    @classmethod
+    def stream_handler(
+        cls,
+        s1:pd.Series,
+        s2:pd.Series,
+        prev_df:pd.DataFrame=None,
+        cur_row:dict[str, int|float]=None,
+        name:Optional[str]=None,
+    )->dict[str, int]:
+        """
+        Process the next stream step relative position using the previous DataFrame state.
+        
+        Args:
+            s1 (pd.Series[float]): The first series.
+            s2 (pd.Series[float]): The second series.
+            name (str): The key name for the output dictionary. Defaults to "relative_pos".
+            prev_df (pd.DataFrame): The previous DataFrame state.
+            cur_row (dict[str, int | float]): The current row values.
+            
+        Returns:
+            dict[str, int]: A dictionary with the computed relative position.
+        """
+        name = name or cls.name
+        names = cls.output_keys(name)
+        return super().stream_handler(
+            s1=s1,
+            s2=s2,
+            name=names[0],
+            prev_df=prev_df,
+            cur_row=cur_row
+        )
         
 __all__ = [
     "SMACalc",
@@ -1623,5 +1715,6 @@ __all__ = [
     "TrendVal",
     "WindowMax",
     "WindowMin",
-    "Shift"
+    "Shift",
+    "RelativePosition"
 ]

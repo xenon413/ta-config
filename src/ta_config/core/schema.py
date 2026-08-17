@@ -19,6 +19,7 @@ from .indicators import(
     WindowMax,
     WindowMin,
     Shift,
+    RelativePosition,
 )
 from .indicators.base_indicator import BaseIndicator
 
@@ -40,6 +41,11 @@ class BaseConfig(BaseModel, ABC):
         
     @abstractmethod
     def column_mapping(self)->dict[str, str]:...
+
+# NOTE: use inherit to have the column mapping,
+# the base class contains the field that are column names
+# and the child have the field that are pure value
+# by doing so the child could access column_mapping function that only contain the fields -> field name
 
 # add alias if perfer other name
 # ---- sma ----
@@ -209,6 +215,19 @@ class TrendValConfig(_TrendValColumn):
         exclude=True
     )
 
+class _RelativePositionColumn(BaseConfig):
+    s1:str
+    s2:str
+
+    def column_mapping(self)->dict[str, str]:
+        return self.model_dump(include=set(_RelativePositionColumn.model_fields.keys()), exclude_none=True)
+
+class RelativePositionConfig(_RelativePositionColumn):
+    indicator_class:Type[BaseIndicator] = Field(
+        default=RelativePosition,
+        exclude=True
+    )
+
 class _WindowMaxColumn(BaseConfig):
     base_series:str = Field(alias="base")
 
@@ -270,6 +289,7 @@ class IndexConfig(BaseModel):
     window_max:Optional[dict[str, WindowMaxConfig]] = None
     window_min:Optional[dict[str, WindowMinConfig]] = None
     shift:Optional[dict[str, ShiftConfig]] = None
+    relative_pos:Optional[dict[str, RelativePositionConfig]] = None
     
     @cached_property
     def config_order(self)->list[tuple[str, BaseConfig]]:

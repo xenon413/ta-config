@@ -11,6 +11,7 @@ from ta_config.core.indicators import (
     WindowMax,
     WindowMin,
     Shift,
+    RelativePosition,
 )
 
 
@@ -222,3 +223,24 @@ def test_shift_mock():
 
     res_stream = Shift.stream_endpoint(base_series=base, period=period, name="test_shift")
     assert res_stream["test_shift"] == 30.0
+
+
+@pytest.mark.unit
+def test_relative_position_mock():
+    """Mock test for RelativePosition (vector and stream endpoints)."""
+    s1 = pd.Series([1.0, 2.0, 1.0, 3.0])
+    s2 = pd.Series([2.0, 1.0, 1.0, 1.0])
+
+    res_vec = RelativePosition.vector_endpoint(s1=s1, s2=s2, name="test_relative_pos")
+    expected = pd.Series([-1, 1, 0, 1], name="test_relative_pos", dtype="int8")
+    pdt.assert_series_equal(res_vec["test_relative_pos"], expected)
+
+    res_stream_1 = RelativePosition.stream_endpoint(cur_s1=1.0, cur_s2=2.0, name="test_relative_pos")
+    assert res_stream_1["test_relative_pos"] == -1
+
+    res_stream_2 = RelativePosition.stream_endpoint(cur_s1=2.0, cur_s2=1.0, name="test_relative_pos")
+    assert res_stream_2["test_relative_pos"] == 1
+    
+    res_stream_3 = RelativePosition.stream_endpoint(cur_s1=1.0, cur_s2=1.0, name="test_relative_pos")
+    assert res_stream_3["test_relative_pos"] == 0
+
