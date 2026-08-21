@@ -6,6 +6,7 @@ import pandas.testing as pdt
 import pytest
 
 from ta_config.core.schema import IndexConfig
+from ta_config.core.core_logic import Config
 from ta_config.core.indicators import SMACalc, Shift, CrossType, CrossVal, EMACalc, MACDCalc
 
 
@@ -32,7 +33,7 @@ def index_config():
 
 @pytest.mark.unit
 def test_vector_config_with_dependency_chain(base_df:pd.DataFrame, index_config:IndexConfig):
-    res = index_config.vector_config(base_df)
+    res = Config.vector_config(index_config, base_df)
 
     expected_columns = {
         "sma_short",
@@ -239,7 +240,7 @@ def test_stream_update_with_dependency_chain(index_config:IndexConfig):
         "close": 14.0,
     }
 
-    res = index_config.stream_update(update_df, row)
+    res = Config.stream_update(index_config, update_df, row)
     expected = _expected_stream_result(update_df.iloc[:-1], row)
 
     result = res.iloc[-1][expected.index]
@@ -274,7 +275,7 @@ def test_stream_rotate_with_dependency_chain(index_config:IndexConfig):
         "close": 14.0,
     }
 
-    res = index_config.stream_rotate(history_df, row)
+    res = Config.stream_rotate(index_config, history_df, row)
     expected = _expected_stream_result(history_df, row)
 
     result = res.iloc[-1][expected.index]

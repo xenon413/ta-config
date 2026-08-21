@@ -14,6 +14,7 @@ from .indicators import (
     Shift
 )
 from .schema import IndexConfig
+from .core_logic import Config
 
 __all__ = [
     "SMACalc",
@@ -29,5 +30,6 @@ __all__ = [
     "WindowMax",
     "WindowMin",
     "Shift",
-    "IndexConfig"
+    "IndexConfig",
+    "Config"
 ]

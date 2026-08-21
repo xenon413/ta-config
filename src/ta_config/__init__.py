@@ -12,7 +12,8 @@ from .core import (
     WindowMax,
     WindowMin,
     Shift,
-    IndexConfig
+    IndexConfig,
+    Config
 )
 
 __all__ = [
@@ -29,5 +30,6 @@ __all__ = [
     "WindowMax",
     "WindowMin",
     "Shift",
-    "IndexConfig"
+    "IndexConfig",
+    "Config"
 ]
