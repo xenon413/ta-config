@@ -1,8 +1,11 @@
-import pytest
-import pandas as pd
+from pathlib import Path
 
-DAY_PATH = r"tests\data\binance_kline\btcusdc_1m_future_2026_06_13.csv"
-WARM_UP_PATH = r"tests\data\binance_kline\btcusdc_1m_future_2026_06_12_warm_up.csv"
+import pandas as pd
+import pytest
+
+DAY_PATH = Path(__file__).parent / "data/binance_kline/btcusdc_1m_future_2026_06_13.csv"
+WARM_UP_PATH = Path(__file__).parent / "data/binance_kline/btcusdc_1m_future_2026_06_12_warm_up.csv"
+
 
 @pytest.fixture(scope="module")
 def sample_df():

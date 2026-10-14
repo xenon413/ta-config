@@ -1,0 +1,4 @@
+include CHANGELOG.md IMPLEMENTATION.md constraints-dev.txt
+recursive-include docs *.md *.json
+recursive-include scripts *.py
+recursive-include tests *.py *.csv *.json *.zip *.CHECKSUM

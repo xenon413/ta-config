@@ -1,17 +1,17 @@
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pandas.testing as pdt
+import pytest
 
 from ta_config.core.indicators import (
     CrossType,
     CrossVal,
+    RelativePosition,
+    Shift,
     TrendType,
     TrendVal,
     WindowMax,
     WindowMin,
-    Shift,
-    RelativePosition,
 )
 
 
@@ -115,7 +115,7 @@ def test_trend_type_mock():
         name="test_trend_type",
     )
 
-    expected = pd.Series([0, 0, 0, 0], name="test_trend_type", dtype="int8")
+    expected = pd.Series([np.nan, np.nan, 0.0, 0.0], name="test_trend_type")
     pdt.assert_series_equal(res_vec["test_trend_type"], expected)
 
     res_tail = TrendType.tail(
@@ -235,12 +235,17 @@ def test_relative_position_mock():
     expected = pd.Series([-1, 1, 0, 1], name="test_relative_pos", dtype="int8")
     pdt.assert_series_equal(res_vec["test_relative_pos"], expected)
 
-    res_stream_1 = RelativePosition.stream_endpoint(cur_s1=1.0, cur_s2=2.0, name="test_relative_pos")
+    res_stream_1 = RelativePosition.stream_endpoint(
+        cur_s1=1.0, cur_s2=2.0, name="test_relative_pos"
+    )
     assert res_stream_1["test_relative_pos"] == -1
 
-    res_stream_2 = RelativePosition.stream_endpoint(cur_s1=2.0, cur_s2=1.0, name="test_relative_pos")
+    res_stream_2 = RelativePosition.stream_endpoint(
+        cur_s1=2.0, cur_s2=1.0, name="test_relative_pos"
+    )
     assert res_stream_2["test_relative_pos"] == 1
-    
-    res_stream_3 = RelativePosition.stream_endpoint(cur_s1=1.0, cur_s2=1.0, name="test_relative_pos")
-    assert res_stream_3["test_relative_pos"] == 0
 
+    res_stream_3 = RelativePosition.stream_endpoint(
+        cur_s1=1.0, cur_s2=1.0, name="test_relative_pos"
+    )
+    assert res_stream_3["test_relative_pos"] == 0

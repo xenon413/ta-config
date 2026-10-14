@@ -1,0 +1,9 @@
+{
+    "binance_kline/btcusdc_1m_future_2026_06_12_warm_up.csv":  "cf7dbc706cf2528e075f3cdf0a128c24169b0cb45534774d177ce70ff1433ae7",
+    "binance_kline/btcusdc_1m_future_2026_06_13.csv":  "a3bcc8d1161f34e1b823336834f22f9bf071d9ee6ec2a6d044d6fd53b807a1cf",
+    "binance_kline/raw/BTCUSDC-1m-2026-06-12.zip":  "31baf55f67aa0c9abec729b853c98e5476c4e978adc20d67cabfe83fdfd1959b",
+    "binance_kline/raw/BTCUSDC-1m-2026-06-12.zip.CHECKSUM":  "dff681c4f4d79ca96634517fb82191333237b67c816d6d43d2a89cdb1b8e53a2",
+    "binance_kline/raw/BTCUSDC-1m-2026-06-13.zip":  "b6435b00b23807952159ada8f5b1750facf32277f6a33ef8070dd2f9aee92eb5",
+    "binance_kline/raw/BTCUSDC-1m-2026-06-13.zip.CHECKSUM":  "81b7bc79024df15b8b86b90637544b458f0ee63986486aa8fd315f8dd5f40505",
+    "config/test_config.json":  "320ccd70f7fe4ace6da3a8e42160855f97d8bc2b96440b7f8a3ee05700838dad"
+}

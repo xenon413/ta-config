@@ -1,20 +1,41 @@
+from .core_logic import Config
+from .errors import ConfigError, ExecutionError
 from .indicators import (
-    SMACalc,
-    SMA2SMACrossStandard,
-    SMATrendMaintVal,
-    SMAadjust,
-    EMACalc,
-    MACDCalc,
     CrossType,
     CrossVal,
+    EMACalc,
+    MACDCalc,
+    RelativePosition,
+    Shift,
+    SMA2SMACrossStandard,
+    SMAadjust,
+    SMACalc,
+    SMATrendMaintVal,
     TrendType,
     TrendVal,
     WindowMax,
     WindowMin,
-    Shift
 )
-from .schema import IndexConfig
-from .core_logic import Config
+from .planning import ExecutionPlan
+from .schema import (
+    BaseConfig,
+    CrossTypeConfig,
+    CrossValConfig,
+    EMACalcConfig,
+    IndexConfig,
+    MACDCalcConfig,
+    RelativePositionConfig,
+    ShiftConfig,
+    SMA2SMACrossStandardConfig,
+    SMAAdjustConfig,
+    SMACalcConfig,
+    SMATrendMaintValConfig,
+    TrendTypeConfig,
+    TrendValConfig,
+    WindowMaxConfig,
+    WindowMinConfig,
+)
+from .streaming import StepMode, StepResult, StreamEngine
 
 __all__ = [
     "SMACalc",
@@ -30,6 +51,28 @@ __all__ = [
     "WindowMax",
     "WindowMin",
     "Shift",
+    "RelativePosition",
     "IndexConfig",
-    "Config"
+    "BaseConfig",
+    "SMACalcConfig",
+    "SMA2SMACrossStandardConfig",
+    "SMATrendMaintValConfig",
+    "SMAAdjustConfig",
+    "EMACalcConfig",
+    "MACDCalcConfig",
+    "CrossTypeConfig",
+    "CrossValConfig",
+    "TrendTypeConfig",
+    "TrendValConfig",
+    "RelativePositionConfig",
+    "WindowMaxConfig",
+    "WindowMinConfig",
+    "ShiftConfig",
+    "Config",
+    "ConfigError",
+    "ExecutionError",
+    "ExecutionPlan",
+    "StreamEngine",
+    "StepMode",
+    "StepResult",
 ]

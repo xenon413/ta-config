@@ -1,0 +1,861 @@
+{
+  "$defs": {
+    "CrossTypeConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "s1": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "S1",
+          "type": "string"
+        },
+        "s2": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "S2",
+          "type": "string"
+        },
+        "prev_s1": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Prev S1",
+          "type": "string"
+        },
+        "prev_s2": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Prev S2",
+          "type": "string"
+        },
+        "upper_bound": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^\\S(?:.*\\S)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Upper Bound"
+        },
+        "lower_bound": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^\\S(?:.*\\S)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lower Bound"
+        },
+        "upper_standard": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^\\S(?:.*\\S)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Upper Standard"
+        },
+        "lower_standard": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^\\S(?:.*\\S)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lower Standard"
+        }
+      },
+      "required": [
+        "s1",
+        "s2",
+        "prev_s1",
+        "prev_s2"
+      ],
+      "title": "CrossTypeConfig",
+      "type": "object"
+    },
+    "CrossValConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "s1": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "S1",
+          "type": "string"
+        },
+        "s2": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "S2",
+          "type": "string"
+        },
+        "base": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Base",
+          "type": "string"
+        },
+        "cross_type": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Cross Type",
+          "type": "string"
+        },
+        "upper_bound": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^\\S(?:.*\\S)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Upper Bound"
+        },
+        "lower_bound": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^\\S(?:.*\\S)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lower Bound"
+        },
+        "upper_standard": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^\\S(?:.*\\S)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Upper Standard"
+        },
+        "lower_standard": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^\\S(?:.*\\S)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lower Standard"
+        }
+      },
+      "required": [
+        "s1",
+        "s2",
+        "base",
+        "cross_type"
+      ],
+      "title": "CrossValConfig",
+      "type": "object"
+    },
+    "EMACalcConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Base",
+          "type": "string"
+        },
+        "window": {
+          "exclusiveMinimum": 0,
+          "maximum": 100000,
+          "title": "Window",
+          "type": "integer"
+        },
+        "smoothing": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Smoothing"
+        }
+      },
+      "required": [
+        "base",
+        "window"
+      ],
+      "title": "EMACalcConfig",
+      "type": "object"
+    },
+    "MACDCalcConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "fast_ema": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Fast Ema",
+          "type": "string"
+        },
+        "slow_ema": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Slow Ema",
+          "type": "string"
+        },
+        "signal": {
+          "exclusiveMinimum": 0,
+          "maximum": 100000,
+          "title": "Signal",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fast_ema",
+        "slow_ema",
+        "signal"
+      ],
+      "title": "MACDCalcConfig",
+      "type": "object"
+    },
+    "RelativePositionConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "s1": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "S1",
+          "type": "string"
+        },
+        "s2": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "S2",
+          "type": "string"
+        }
+      },
+      "required": [
+        "s1",
+        "s2"
+      ],
+      "title": "RelativePositionConfig",
+      "type": "object"
+    },
+    "SMA2SMACrossStandardConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Base",
+          "type": "string"
+        },
+        "sma1": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Sma1",
+          "type": "string"
+        },
+        "sma2": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Sma2",
+          "type": "string"
+        },
+        "window1": {
+          "exclusiveMinimum": 0,
+          "maximum": 100000,
+          "title": "Window1",
+          "type": "integer"
+        },
+        "window2": {
+          "exclusiveMinimum": 0,
+          "maximum": 100000,
+          "title": "Window2",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "sma1",
+        "sma2",
+        "window1",
+        "window2"
+      ],
+      "title": "SMA2SMACrossStandardConfig",
+      "type": "object"
+    },
+    "SMAAdjustConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Base",
+          "type": "string"
+        },
+        "adj": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Adj",
+          "type": "string"
+        },
+        "window": {
+          "exclusiveMinimum": 0,
+          "maximum": 100000,
+          "title": "Window",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "adj",
+        "window"
+      ],
+      "title": "SMAAdjustConfig",
+      "type": "object"
+    },
+    "SMACalcConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Base",
+          "type": "string"
+        },
+        "window": {
+          "exclusiveMinimum": 0,
+          "maximum": 100000,
+          "title": "Window",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "window"
+      ],
+      "title": "SMACalcConfig",
+      "type": "object"
+    },
+    "SMATrendMaintValConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Base",
+          "type": "string"
+        },
+        "sma": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Sma",
+          "type": "string"
+        },
+        "prev_sma": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Prev Sma",
+          "type": "string"
+        },
+        "window": {
+          "exclusiveMinimum": 0,
+          "maximum": 100000,
+          "title": "Window",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "sma",
+        "prev_sma",
+        "window"
+      ],
+      "title": "SMATrendMaintValConfig",
+      "type": "object"
+    },
+    "ShiftConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Base",
+          "type": "string"
+        },
+        "period": {
+          "maximum": 100000,
+          "minimum": 0,
+          "title": "Period",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "period"
+      ],
+      "title": "ShiftConfig",
+      "type": "object"
+    },
+    "TrendTypeConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "upper_bound": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Upper Bound",
+          "type": "string"
+        },
+        "lower_bound": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Lower Bound",
+          "type": "string"
+        },
+        "prev_base": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Prev Base",
+          "type": "string"
+        },
+        "thresh": {
+          "minimum": 0,
+          "title": "Thresh",
+          "type": "number"
+        },
+        "trend_len": {
+          "exclusiveMinimum": 0,
+          "maximum": 100000,
+          "title": "Trend Len",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "upper_bound",
+        "lower_bound",
+        "prev_base",
+        "thresh",
+        "trend_len"
+      ],
+      "title": "TrendTypeConfig",
+      "type": "object"
+    },
+    "TrendValConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "upper_bound": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Upper Bound",
+          "type": "string"
+        },
+        "lower_bound": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Lower Bound",
+          "type": "string"
+        },
+        "upper_standard": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Upper Standard",
+          "type": "string"
+        },
+        "lower_standard": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Lower Standard",
+          "type": "string"
+        },
+        "trend_type": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Trend Type",
+          "type": "string"
+        },
+        "base": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Base",
+          "type": "string"
+        }
+      },
+      "required": [
+        "upper_bound",
+        "lower_bound",
+        "upper_standard",
+        "lower_standard",
+        "trend_type",
+        "base"
+      ],
+      "title": "TrendValConfig",
+      "type": "object"
+    },
+    "WindowMaxConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Base",
+          "type": "string"
+        },
+        "window": {
+          "exclusiveMinimum": 0,
+          "maximum": 100000,
+          "title": "Window",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "window"
+      ],
+      "title": "WindowMaxConfig",
+      "type": "object"
+    },
+    "WindowMinConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Base",
+          "type": "string"
+        },
+        "window": {
+          "exclusiveMinimum": 0,
+          "maximum": 100000,
+          "title": "Window",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "window"
+      ],
+      "title": "WindowMinConfig",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "sma_calc": {
+      "anyOf": [
+        {
+          "patternProperties": {
+            "^\\S(?:.*\\S)?$": {
+              "$ref": "#/$defs/SMACalcConfig"
+            }
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sma Calc"
+    },
+    "sma_trend": {
+      "anyOf": [
+        {
+          "patternProperties": {
+            "^\\S(?:.*\\S)?$": {
+              "$ref": "#/$defs/SMATrendMaintValConfig"
+            }
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sma Trend"
+    },
+    "sma_adjust": {
+      "anyOf": [
+        {
+          "patternProperties": {
+            "^\\S(?:.*\\S)?$": {
+              "$ref": "#/$defs/SMAAdjustConfig"
+            }
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sma Adjust"
+    },
+    "ema_calc": {
+      "anyOf": [
+        {
+          "patternProperties": {
+            "^\\S(?:.*\\S)?$": {
+              "$ref": "#/$defs/EMACalcConfig"
+            }
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Ema Calc"
+    },
+    "macd_calc": {
+      "anyOf": [
+        {
+          "patternProperties": {
+            "^\\S(?:.*\\S)?$": {
+              "$ref": "#/$defs/MACDCalcConfig"
+            }
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Macd Calc"
+    },
+    "sma2sma_cross_standard": {
+      "anyOf": [
+        {
+          "patternProperties": {
+            "^\\S(?:.*\\S)?$": {
+              "$ref": "#/$defs/SMA2SMACrossStandardConfig"
+            }
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sma2Sma Cross Standard"
+    },
+    "cross_type": {
+      "anyOf": [
+        {
+          "patternProperties": {
+            "^\\S(?:.*\\S)?$": {
+              "$ref": "#/$defs/CrossTypeConfig"
+            }
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cross Type"
+    },
+    "cross_val": {
+      "anyOf": [
+        {
+          "patternProperties": {
+            "^\\S(?:.*\\S)?$": {
+              "$ref": "#/$defs/CrossValConfig"
+            }
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cross Val"
+    },
+    "trend_type": {
+      "anyOf": [
+        {
+          "patternProperties": {
+            "^\\S(?:.*\\S)?$": {
+              "$ref": "#/$defs/TrendTypeConfig"
+            }
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Trend Type"
+    },
+    "trend_val": {
+      "anyOf": [
+        {
+          "patternProperties": {
+            "^\\S(?:.*\\S)?$": {
+              "$ref": "#/$defs/TrendValConfig"
+            }
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Trend Val"
+    },
+    "window_max": {
+      "anyOf": [
+        {
+          "patternProperties": {
+            "^\\S(?:.*\\S)?$": {
+              "$ref": "#/$defs/WindowMaxConfig"
+            }
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Window Max"
+    },
+    "window_min": {
+      "anyOf": [
+        {
+          "patternProperties": {
+            "^\\S(?:.*\\S)?$": {
+              "$ref": "#/$defs/WindowMinConfig"
+            }
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Window Min"
+    },
+    "shift": {
+      "anyOf": [
+        {
+          "patternProperties": {
+            "^\\S(?:.*\\S)?$": {
+              "$ref": "#/$defs/ShiftConfig"
+            }
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Shift"
+    },
+    "relative_pos": {
+      "anyOf": [
+        {
+          "patternProperties": {
+            "^\\S(?:.*\\S)?$": {
+              "$ref": "#/$defs/RelativePositionConfig"
+            }
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Relative Pos"
+    }
+  },
+  "title": "IndexConfig",
+  "type": "object"
+}

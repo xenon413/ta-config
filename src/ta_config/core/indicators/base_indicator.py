@@ -1,67 +1,57 @@
-from abc import ABC, abstractmethod
+"""Shared compatibility adapters; concrete indicators own their formulas."""
+
+from collections.abc import Callable, Mapping
+from typing import Any, ClassVar, Protocol, cast
+
 import pandas as pd
 
-class BaseIndicator(ABC):
-    """
-    Abstract Base Class for low-latency quantitative technical indicators.
 
-    This interface enforces a unified two-tiered execution layout (Vector and 
-    Stream endpoints) to seamlessly handle both high-throughput historical 
-    backtesting and microsecond-level live streaming execution loops.
+class IndicatorProtocol(Protocol):
+    def vector(
+        self, inputs: Mapping[str, pd.Series], parameters: Mapping[str, Any], name: str
+    ) -> pd.DataFrame: ...
 
-    Design Philosophy:
-    ------------------
-    1. Stateful Accumulators (e.g., SMA, EMA):
-       Require different implementations for historical setup (Vector) 
-       vs. live streaming (Stream) to utilize fast O(1) recursive shortcuts.
-    2. Stateless Transformers (e.g., CrossType, SMACrossStandard):
-       Evaluate point-in-time relationships between existing metrics. The 
-       Stream endpoint for these indicators naturally uses the same O(1) 
-       execution path.
 
-    Methods:
-    --------
-    vector_endpoint(*args, **kwargs):
-        Processes static historical matrices (typically pandas Series or DataFrames).
-        Optimized for vectorized math operations during backtesting.
-        Complexity: O(N) or O(N * W).
-
-    stream_endpoint(*args, **kwargs):
-        Evaluates a single incoming real-time market tick or bar update.
-        Must be hard-optimized to eliminate loops, slice operations, or lookbacks.
-        Complexity: Strictly O(1).
-
-    stream_handler(*args, **kwargs):
-        Unified middleman method that prepares data for stream_endpoint.
-        Produces a dictionary that can be directly passed to stream_endpoint.
-    """
-    name = "indicator"
-    # (prefix, suffix)
-    output_key_parts = (
-        ("", ""),
-    )
+class BaseIndicator:
+    name: ClassVar[str] = "indicator"
+    output_key_parts: ClassVar[tuple[tuple[str, str], ...]] = (("", ""),)
 
     @classmethod
-    def output_keys(cls, name:str)->tuple[str, ...]:
+    def output_keys(cls, name: str) -> tuple[str, ...]:
         return tuple(f"{prefix}{name}{suffix}" for prefix, suffix in cls.output_key_parts)
 
     @classmethod
-    @abstractmethod
-    def vector_endpoint(cls, *args, **kwargs)->pd.DataFrame:
-        """Execute historical vectorized matrix calculations."""
-        pass
+    def vector(
+        cls, inputs: Mapping[str, pd.Series], parameters: Mapping[str, Any], name: str
+    ) -> pd.DataFrame:
+        series = list(inputs.values())
+        if series and any(not s.index.equals(series[0].index) for s in series):
+            raise ValueError("input Series must have identical indexes")
+        endpoint = cast(Callable[..., pd.DataFrame], getattr(cls, "vector_endpoint"))
+        return endpoint(**inputs, **parameters, name=name)
 
     @classmethod
-    @abstractmethod
-    def stream_endpoint(cls, *args, **kwargs)->dict[str, int|float]:
-        """Compute the next step metric using low-latency O(1) recursive or scalar math."""
-        pass
+    def stream_handler(
+        cls,
+        *,
+        prev_df: pd.DataFrame,
+        cur_row: Mapping[str, float],
+        name: str | None = None,
+        **kwargs: Any,
+    ) -> dict[str, float]:
+        """Compatibility replay: Series contain history EXCLUDING the current bar.
 
-    @classmethod
-    @abstractmethod
-    def stream_handler(cls, prev_df, cur_row)->dict[str, int|float]:
+        Use StreamEngine for bounded state. Mapped previous-value inputs use the
+        current mapped scalar, exactly as in vector mode.
         """
-        Unified middleman method owned by each class.
-        Produces a dictionary that can be directly passed to stream_endpoint.
-        """
-        pass
+        inputs = {}
+        parameters = {}
+        for key, value in kwargs.items():
+            if isinstance(value, pd.Series):
+                inputs[key] = pd.Series(
+                    [*value.to_numpy(dtype=float), cur_row[str(value.name)]], dtype=float
+                )
+            else:
+                parameters[key] = value
+        result = cls.vector(inputs, parameters, name or cls.name)
+        return {str(key): float(value) for key, value in result.iloc[-1].items()}

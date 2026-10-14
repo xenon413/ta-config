@@ -1,135 +1,117 @@
+"""DataFrame convenience API. Reuse compile()/StreamEngine on streaming hot paths."""
+
+import warnings
+from collections.abc import Hashable, Iterable, Mapping
+
 import pandas as pd
-from .schema import IndexConfig, BaseConfig
+
+from .errors import ExecutionError
+from .planning import ExecutionPlan, compile_plan, validate_frame
+from .schema import BaseConfig, IndexConfig
+
 
 class Config:
     @staticmethod
+    def compile(index_config: IndexConfig, input_columns: Iterable[str]) -> ExecutionPlan:
+        return compile_plan(index_config, input_columns)
+
+    @staticmethod
     def config_order(index_config: IndexConfig) -> list[tuple[str, BaseConfig]]:
-        # init
-        tasks: dict[str, BaseConfig] = {} # field_name -> field
-        dependencies: dict[str, list[str]] = {} # field_name -> deps_name
-        task_by_output: dict[str, str] = {} # generate_name -> field_name
+        # Compatibility ordering API has no frame schema. Full validation requires compile().
+        tasks = [item for _, group in index_config for item in (group or {}).items()]
+        outputs = {key for name, item in tasks for key in item.indicator_class.output_keys(name)}
+        raw = sorted({ref for _, item in tasks for ref in item.column_mapping().values()} - outputs)
+        return [(task.name, task.config) for task in compile_plan(index_config, raw).tasks]
 
-        for _, field in index_config:
-            if field is None:
-                continue
-            field: dict[str, BaseConfig]
-            for field_name, field_config in field.items():
-                
-                # flatten
-                tasks[field_name] = field_config
+    @staticmethod
+    def vector_config(
+        index_config: IndexConfig,
+        df: pd.DataFrame,
+        include_orign: bool | None = None,
+        *,
+        include_original: bool | None = None,
+    ) -> pd.DataFrame:
+        if include_orign is not None:
+            warnings.warn(
+                "include_orign is deprecated; use include_original",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if include_original is not None:
+                raise TypeError("pass only include_original, not both spellings")
+            include_original = include_orign
+        return compile_plan(index_config, df.columns).vector(
+            df, include_original=True if include_original is None else include_original
+        )
 
-                dependencies[field_name] = [d for d in field_config.column_mapping().values() if d is not None]
-                
-                for out_key in field_config.indicator_class.output_keys(field_name):
-                    task_by_output[out_key] = field_name
-
-        # sort
-        sorted_task = []
-        visited = set()
-        temp_visited = set() # in one chain, prevent looping
-
-        def visit(node: str):
-            if node in temp_visited:
-                raise ValueError(f"Cyclic dependency detected: {node}")
-            if node not in visited:
-                temp_visited.add(node)
-                for dep in dependencies.get(node, []):
-                    # get task from dependent if task exist
-                    # if not exist view as the leaf
-                    # handles the dependents on original df
-                    dep_task = task_by_output.get(dep)
-                    if dep_task:
-                        visit(dep_task)
-                temp_visited.remove(node)
-                visited.add(node)
-                sorted_task.append((node, tasks[node]))
-
-        for node in tasks:
-            if node not in visited:
-                visit(node)
-
-        return sorted_task
+    @staticmethod
+    def _raw(index_config: IndexConfig, df: pd.DataFrame) -> pd.DataFrame:
+        if not df.columns.is_unique:
+            raise ExecutionError("frame: duplicate column labels")
+        outputs = {
+            key
+            for _, group in index_config
+            for name, item in (group or {}).items()
+            for key in item.indicator_class.output_keys(name)
+        }
+        return df.loc[:, [key for key in df.columns if key not in outputs]].copy()
 
     @classmethod
-    def vector_config(cls, index_config: IndexConfig, df: pd.DataFrame, include_orign: bool = True) -> pd.DataFrame:
-        results = [df] if include_orign else []
-        available_cols = {col: df[col] for col in df.columns}
-        
-        for field_name, field_config in cls.config_order(index_config):
-            field_name: str
-            field_config: BaseConfig
-
-            kwargs = field_config.model_dump(exclude_none=True)
-            indicator_cls = field_config.indicator_class
-            
-            # get columns
-            col_val: dict[str, pd.Series] = {
-                arg_name: available_cols[col_name] for arg_name, col_name in field_config.column_mapping().items()
-            }
-            kwargs.update(col_val)
-            kwargs |= {"name": field_name}
-            
-            new_cols = indicator_cls.vector_endpoint(**kwargs)
-            results.append(new_cols)
-            
-            for col in new_cols.columns:
-                available_cols[col] = new_cols[col]
-
-        if not results:
-            return pd.DataFrame(index=df.index)
-        return pd.concat(results, axis=1)
-    
-    @classmethod
-    def stream_update(cls, index_config: IndexConfig, df: pd.DataFrame, row: dict) -> pd.DataFrame:
-        cur_df = df.copy()
-        prev_df = cur_df.iloc[:-1]
-        cur_row = row.copy()
-
-        for field_name, field_config in cls.config_order(index_config):
-            field_name: str
-            field_config: BaseConfig
-
-            kwargs = field_config.model_dump(exclude_none=True)
-            indicator_cls = field_config.indicator_class
-            
-            # get columns
-            col_val: dict[str, pd.Series] = {
-                arg_name: prev_df[col_name] for arg_name, col_name in field_config.column_mapping().items()
-            }
-            kwargs.update(col_val)
-            kwargs |= {"name": field_name, "prev_df": prev_df, "cur_row": cur_row}
-            res = indicator_cls.stream_handler(**kwargs)
-            cur_row.update(res)
-
-            col_pos = [prev_df.columns.get_loc(col) for col in res]
-            cur_df.iloc[-1, col_pos] = list(res.values())
-        
-        return cur_df
+    def stream_update(
+        cls,
+        index_config: IndexConfig,
+        df: pd.DataFrame,
+        row: Mapping[str, float],
+        *,
+        index: Hashable | None = None,
+    ) -> pd.DataFrame:
+        """Replace the latest bar with a COMPLETE raw event; omitted index preserves its label."""
+        raw = cls._raw(index_config, df)
+        validate_frame(raw, tuple(raw.columns))
+        if raw.empty:
+            raise ExecutionError("update requires an existing bar")
+        if index is not None and index != raw.index[-1]:
+            raise ExecutionError("update requires the latest existing index")
+        cls._validate_row(raw, row)
+        raw.iloc[-1] = pd.Series(row)
+        return cls.vector_config(index_config, raw)
 
     @classmethod
-    def stream_rotate(cls, index_config: IndexConfig, df: pd.DataFrame, row: dict) -> pd.DataFrame:
-        prev_df = df.copy()
-        cur_df = df.copy()
-        cur_df.loc[len(df)] = None
+    def stream_rotate(
+        cls,
+        index_config: IndexConfig,
+        df: pd.DataFrame,
+        row: Mapping[str, float],
+        *,
+        index: Hashable | None = None,
+    ) -> pd.DataFrame:
+        """Append a COMPLETE raw event. Only RangeIndex can infer an omitted index."""
+        raw = cls._raw(index_config, df)
+        validate_frame(raw, tuple(raw.columns))
+        cls._validate_row(raw, row)
+        if index is None:
+            if not isinstance(raw.index, pd.RangeIndex):
+                raise ExecutionError("append requires an explicit index for non-RangeIndex frames")
+            index = raw.index[-1] + raw.index.step if len(raw) else raw.index.start
+        event = pd.DataFrame(
+            [row], index=pd.Index([index], name=raw.index.name), columns=raw.columns
+        )
+        combined = pd.concat([raw, event])
+        if isinstance(raw.index, pd.RangeIndex) and index == raw.index.stop:
+            combined.index = pd.RangeIndex(
+                raw.index.start,
+                raw.index.stop + raw.index.step,
+                raw.index.step,
+                name=raw.index.name,
+            )
+        return cls.vector_config(index_config, combined)
 
-        cur_row = row.copy()
-        for field_name, field_config in cls.config_order(index_config):
-            field_name: str
-            field_config: BaseConfig
+    @staticmethod
+    def _validate_row(raw: pd.DataFrame, row: Mapping[str, float]) -> None:
+        if set(row) != set(raw.columns):
+            raise ExecutionError("event fields must exactly match all raw columns")
+        validate_frame(pd.DataFrame([row], columns=raw.columns), tuple(raw.columns))
 
-            kwargs = field_config.model_dump(exclude_none=True)
-            indicator_cls = field_config.indicator_class
-            
-            # get columns
-            col_val: dict[str, pd.Series] = {
-                arg_name: prev_df[col_name] for arg_name, col_name in field_config.column_mapping().items()
-            }
-            kwargs.update(col_val)
-            kwargs |= {"name": field_name, "prev_df": prev_df, "cur_row": cur_row}
-            res = indicator_cls.stream_handler(**kwargs)
-            cur_row.update(res)
 
-            col_pos = [cur_df.columns.get_loc(col) for col in res]
-            cur_df.iloc[-1, col_pos] = list(res.values())
-        
-        return cur_df
+# TODO: support data streaming using vector config chunck by chunck
+# do research on where the thresh for using row by row or vector to config data are more efficient

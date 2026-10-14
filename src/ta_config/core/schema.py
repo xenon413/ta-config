@@ -1,250 +1,215 @@
-from pydantic import BaseModel, ConfigDict, Field
-from typing import Optional
-from typing import Type
-from functools import cached_property
-import pandas as pd
+"""Strict immutable configuration. Input references are explicit class metadata."""
 
-from .indicators import(
-    SMACalc, 
-    SMA2SMACrossStandard,
-    SMATrendMaintVal,
-    SMAadjust,
-    EMACalc,
-    MACDCalc,
-    CrossType,
-    CrossVal,
-    TrendType,
-    TrendVal,
-    WindowMax,
-    WindowMin,
-    Shift,
-    RelativePosition,
-)
+from collections.abc import Mapping
+from types import MappingProxyType
+from typing import Annotated, ClassVar, Self
+
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
+
+from . import indicators as ind
 from .indicators.base_indicator import BaseIndicator
 
+Identifier = Annotated[str, Field(min_length=1, pattern=r"^\S(?:.*\S)?$")]
+Window = Annotated[int, Field(gt=0, le=100_000)]
+Period = Annotated[int, Field(ge=0, le=100_000)]
+Threshold = Annotated[float, Field(ge=0, allow_inf_nan=False)]
+
+
 class BaseConfig(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True, populate_by_name=True)
+    indicator_class: ClassVar[type[BaseIndicator]] = BaseIndicator
+    input_fields: ClassVar[tuple[str, ...]] = ()
 
-    indicator_class:Type[BaseIndicator] = Field(
-        default=BaseIndicator,
-        exclude=True
-    )
-
-    # @abstractmethod
-    # def generate(self)->tuple[str, ...]:
-    #     """returns the field name that returns after executing"""
-    #     pass
-        
     def column_mapping(self) -> dict[str, str]:
-        column_class = next(c for c in self.__class__.__mro__ if BaseConfig in c.__bases__)
-        return self.model_dump(include=set(column_class.model_fields.keys()), exclude_none=True)
+        return {
+            key: getattr(self, key) for key in self.input_fields if getattr(self, key) is not None
+        }
 
-# NOTE: use inherit to have the column mapping,
-# the base class contains the field that are column names
-# and the child have the field that are pure value
-# by doing so the child could access column_mapping function that only contain the fields -> field name
+    def parameters(self) -> dict[str, int | float]:
+        return self.model_dump(exclude=set(self.input_fields), exclude_none=True)
 
-# add alias if perfer other name
-# ---- sma ----
-class _SMACalcColumn(BaseConfig):
-    base_series:str = Field(alias="base")
-    
-class SMACalcConfig(_SMACalcColumn):
-    window:int
 
-    indicator_class:Type[BaseIndicator] = Field(
-        default=SMACalc,
-        exclude=True
+class SMACalcConfig(BaseConfig):
+    indicator_class = ind.SMACalc
+    input_fields = ("base_series",)
+    base_series: Identifier = Field(alias="base")
+    window: Window
+
+
+class SMA2SMACrossStandardConfig(BaseConfig):
+    indicator_class = ind.SMA2SMACrossStandard
+    input_fields = ("base_series", "sma1", "sma2")
+    base_series: Identifier = Field(alias="base")
+    sma1: Identifier
+    sma2: Identifier
+    window1: Window
+    window2: Window
+
+
+class SMATrendMaintValConfig(BaseConfig):
+    indicator_class = ind.SMATrendMaintVal
+    input_fields = ("base_series", "sma", "prev_sma")
+    base_series: Identifier = Field(alias="base")
+    sma: Identifier
+    prev_sma: Identifier
+    window: Window
+
+
+class SMAAdjustConfig(BaseConfig):
+    indicator_class = ind.SMAadjust
+    input_fields = ("base_series", "adj_series")
+    base_series: Identifier = Field(alias="base")
+    adj_series: Identifier = Field(alias="adj")
+    window: Window
+
+
+class EMACalcConfig(BaseConfig):
+    indicator_class = ind.EMACalc
+    input_fields = ("base_series",)
+    base_series: Identifier = Field(alias="base")
+    window: Window
+    smoothing: Annotated[float, Field(gt=0, allow_inf_nan=False)] | None = None
+
+    @model_validator(mode="after")
+    def valid_alpha(self) -> Self:
+        if (2 if self.smoothing is None else self.smoothing) > self.window + 1:
+            raise ValueError("smoothing / (window + 1) must be in (0, 1]")
+        return self
+
+
+class MACDCalcConfig(BaseConfig):
+    indicator_class = ind.MACDCalc
+    input_fields = ("fast_ema", "slow_ema")
+    fast_ema: Identifier
+    slow_ema: Identifier
+    signal: Window
+
+
+class CrossTypeConfig(BaseConfig):
+    indicator_class = ind.CrossType
+    input_fields = (
+        "s1",
+        "s2",
+        "prev_s1",
+        "prev_s2",
+        "upper_bound",
+        "lower_bound",
+        "upper_standard",
+        "lower_standard",
     )
+    s1: Identifier
+    s2: Identifier
+    prev_s1: Identifier
+    prev_s2: Identifier
+    upper_bound: Identifier | None = None
+    lower_bound: Identifier | None = None
+    upper_standard: Identifier | None = None
+    lower_standard: Identifier | None = None
 
-class _SMA2SMACrossStandardColumn(BaseConfig):
-    base_series:str = Field(alias="base")
-    sma1:str
-    sma2:str
-    
-class SMA2SMACrossStandardConfig(_SMA2SMACrossStandardColumn):
-    window1:int
-    window2:int
 
-    indicator_class:Type[BaseIndicator] = Field(
-        default=SMA2SMACrossStandard,
-        exclude=True
+class CrossValConfig(BaseConfig):
+    indicator_class = ind.CrossVal
+    input_fields = (
+        "s1",
+        "s2",
+        "base_series",
+        "cross_type",
+        "upper_bound",
+        "lower_bound",
+        "upper_standard",
+        "lower_standard",
     )
+    s1: Identifier
+    s2: Identifier
+    base_series: Identifier = Field(alias="base")
+    cross_type: Identifier
+    upper_bound: Identifier | None = None
+    lower_bound: Identifier | None = None
+    upper_standard: Identifier | None = None
+    lower_standard: Identifier | None = None
 
-class _SMATrendMaintValColumn(BaseConfig):
-    base_series:str = Field(alias="base")
-    sma:str
-    prev_sma:str
 
-class SMATrendMaintValConfig(_SMATrendMaintValColumn):
-    window:int
+class TrendTypeConfig(BaseConfig):
+    indicator_class = ind.TrendType
+    input_fields = ("upper_bound", "lower_bound", "prev_base_series")
+    upper_bound: Identifier
+    lower_bound: Identifier
+    prev_base_series: Identifier = Field(alias="prev_base")
+    thresh: Threshold
+    trend_len: Window
 
-    indicator_class:Type[BaseIndicator] = Field(
-        default=SMATrendMaintVal,
-        exclude=True
+
+class TrendValConfig(BaseConfig):
+    indicator_class = ind.TrendVal
+    input_fields = (
+        "upper_bound",
+        "lower_bound",
+        "upper_standard",
+        "lower_standard",
+        "trend_type",
+        "base_series",
     )
+    upper_bound: Identifier
+    lower_bound: Identifier
+    upper_standard: Identifier
+    lower_standard: Identifier
+    trend_type: Identifier
+    base_series: Identifier = Field(alias="base")
 
-class _SMAAdjustColumn(BaseConfig):
-    base_series:str = Field(alias="base")
-    adj_series:str = Field(alias="adj")
 
-class SMAAdjustConfig(_SMAAdjustColumn):
-    window:int
-    indicator_class:Type[BaseIndicator] = Field(
-        default=SMAadjust,
-        exclude=True
-    )
+class RelativePositionConfig(BaseConfig):
+    indicator_class = ind.RelativePosition
+    input_fields = ("s1", "s2")
+    s1: Identifier
+    s2: Identifier
 
-# ---- ema ----
-class _EMACalcColumn(BaseConfig):
-    base_series:str = Field(alias="base")
-     
-class EMACalcConfig(_EMACalcColumn):
-    window:int
-    smoothing:Optional[float]=None
 
-    indicator_class:Type[BaseIndicator] = Field(
-        default=EMACalc,
-        exclude=True
-    )
+class WindowMaxConfig(BaseConfig):
+    indicator_class = ind.WindowMax
+    input_fields = ("base_series",)
+    base_series: Identifier = Field(alias="base")
+    window: Window
 
-# ---- macd ----
-class _MACDCalcColumn(BaseConfig):
-    fast_ema:str
-    slow_ema:str
-     
-class MACDCalcConfig(_MACDCalcColumn):
-    signal:int
 
-    indicator_class:Type[BaseIndicator] = Field(
-        default=MACDCalc,
-        exclude=True
-    )
+class WindowMinConfig(BaseConfig):
+    indicator_class = ind.WindowMin
+    input_fields = ("base_series",)
+    base_series: Identifier = Field(alias="base")
+    window: Window
 
-# ---- relation ----
-class _CrossTypeColumn(BaseConfig):
-    s1:str
-    s2:str
-    prev_s1:str
-    prev_s2:str
-    upper_bound:Optional[str]=None
-    lower_bound:Optional[str]=None
-    upper_standard:Optional[str]=None
-    lower_standard:Optional[str]=None
 
-class CrossTypeConfig(_CrossTypeColumn):
-    indicator_class:Type[BaseIndicator] = Field(
-        default=CrossType,
-        exclude=True
-    )
+class ShiftConfig(BaseConfig):
+    indicator_class = ind.Shift
+    input_fields = ("base_series",)
+    base_series: Identifier = Field(alias="base")
+    period: Period
 
-class _CrossValColumn(BaseConfig):
-    s1:str
-    s2:str
-    base_series:str = Field(alias="base")
-    cross_type:str
-    upper_bound:Optional[str]=None
-    lower_bound:Optional[str]=None
-    upper_standard:Optional[str]=None
-    lower_standard:Optional[str]=None
-
-class CrossValConfig(_CrossValColumn):
-    indicator_class:Type[BaseIndicator] = Field(
-        default=CrossVal,
-        exclude=True
-    )
-
-class _TrendTypeColumn(BaseConfig):
-    upper_bound:str
-    lower_bound:str
-    prev_base_series:str = Field(alias="prev_base")
-
-class TrendTypeConfig(_TrendTypeColumn):
-    thresh:float
-    trend_len:int
-
-    indicator_class:Type[BaseIndicator] = Field(
-        default=TrendType,
-        exclude=True
-    )
-    
-class _TrendValColumn(BaseConfig):
-    upper_bound:str
-    lower_bound:str
-    upper_standard:str
-    lower_standard:str
-    trend_type:str
-    base_series:str = Field(alias="base")
-
-class TrendValConfig(_TrendValColumn):
-    indicator_class:Type[BaseIndicator] = Field(
-        default=TrendVal,
-        exclude=True
-    )
-
-class _RelativePositionColumn(BaseConfig):
-    s1:str
-    s2:str
-
-class RelativePositionConfig(_RelativePositionColumn):
-    indicator_class:Type[BaseIndicator] = Field(
-        default=RelativePosition,
-        exclude=True
-    )
-
-class _WindowMaxColumn(BaseConfig):
-    base_series:str = Field(alias="base")
-
-class WindowMaxConfig(_WindowMaxColumn):
-    window:int
-
-    indicator_class:Type[BaseIndicator] = Field(
-        default=WindowMax,
-        exclude=True
-    )
-    
-class _WindowMinColumn(BaseConfig):
-    base_series:str = Field(alias="base")
-
-class WindowMinConfig(_WindowMinColumn):
-    window:int
-
-    indicator_class:Type[BaseIndicator] = Field(
-        default=WindowMin,
-        exclude=True
-    )
-    
-class _ShiftColumn(BaseConfig):
-    base_series:str = Field(alias="base")
-
-class ShiftConfig(_ShiftColumn):
-    period:int
-
-    indicator_class:Type[BaseIndicator] = Field(
-        default=Shift,
-        exclude=True
-    )
 
 class IndexConfig(BaseModel):
-    model_config = ConfigDict(
-        frozen=True,
-        extra="forbid"
-    )
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+    sma_calc: Mapping[Identifier, SMACalcConfig] | None = None
+    sma_trend: Mapping[Identifier, SMATrendMaintValConfig] | None = None
+    sma_adjust: Mapping[Identifier, SMAAdjustConfig] | None = None
+    ema_calc: Mapping[Identifier, EMACalcConfig] | None = None
+    macd_calc: Mapping[Identifier, MACDCalcConfig] | None = None
+    sma2sma_cross_standard: Mapping[Identifier, SMA2SMACrossStandardConfig] | None = None
+    cross_type: Mapping[Identifier, CrossTypeConfig] | None = None
+    cross_val: Mapping[Identifier, CrossValConfig] | None = None
+    trend_type: Mapping[Identifier, TrendTypeConfig] | None = None
+    trend_val: Mapping[Identifier, TrendValConfig] | None = None
+    window_max: Mapping[Identifier, WindowMaxConfig] | None = None
+    window_min: Mapping[Identifier, WindowMinConfig] | None = None
+    shift: Mapping[Identifier, ShiftConfig] | None = None
+    relative_pos: Mapping[Identifier, RelativePositionConfig] | None = None
 
-    sma_calc:Optional[dict[str, SMACalcConfig]] = None
-    sma_trend:Optional[dict[str, SMATrendMaintValConfig]] = None
-    sma_adjust:Optional[dict[str, SMAAdjustConfig]] = None
-    ema_calc:Optional[dict[str, EMACalcConfig]] = None
-    macd_calc:Optional[dict[str, MACDCalcConfig]] = None
-    sma2sma_cross_standard:Optional[dict[str, SMA2SMACrossStandardConfig]] = None
-    cross_type:Optional[dict[str, CrossTypeConfig]] = None
-    cross_val:Optional[dict[str, CrossValConfig]] = None
-    trend_type:Optional[dict[str, TrendTypeConfig]] = None
-    trend_val:Optional[dict[str, TrendValConfig]] = None
-    window_max:Optional[dict[str, WindowMaxConfig]] = None
-    window_min:Optional[dict[str, WindowMinConfig]] = None
-    shift:Optional[dict[str, ShiftConfig]] = None
-    relative_pos:Optional[dict[str, RelativePositionConfig]] = None
+    @model_validator(mode="after")
+    def freeze_maps(self) -> Self:
+        for key in type(self).model_fields:
+            value = getattr(self, key)
+            if value is not None:
+                object.__setattr__(self, key, MappingProxyType(dict(value)))
+        return self
+
+    @field_serializer("*")
+    def serialize_maps(self, value):
+        return None if value is None else dict(value)

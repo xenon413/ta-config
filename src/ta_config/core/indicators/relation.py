@@ -1,589 +1,322 @@
-import pandas as pd
-import numpy as np
-import logging
-from typing import Optional
+import math
 
-from ..helper import log_lifecycle
+import numpy as np
+import pandas as pd
+
 from .base_indicator import BaseIndicator
 
-logger = logging.getLogger(__name__)
+
+def _masked(result: pd.Series, *inputs: pd.Series) -> pd.Series:
+    valid = pd.Series(True, index=result.index)
+    for value in inputs:
+        valid &= value.notna()
+    return result.where(valid)
+
 
 class CrossType(BaseIndicator):
+    name = "cross_type"
+
     @classmethod
-    @log_lifecycle(logger)
     def vector_endpoint(
         cls,
-        s1:pd.Series, 
-        s2:pd.Series, 
-        prev_s1:pd.Series,
-        prev_s2:pd.Series,
-        upper_bound:Optional[pd.Series], 
-        lower_bound:Optional[pd.Series], 
-        upper_standard:Optional[pd.Series],
-        lower_standard:Optional[pd.Series],
-        name:str
-    )->pd.DataFrame:
-        # NOTE:
-        # the standard and bound must be in the same units, 
-        # and it's not required to be in the same unit as s1, s2
-        
-        # e.g.
-        # sma25 and sma320 the can have a calculated cross standard in price
-        # and the bound would be the high/low price
+        s1: pd.Series,
+        s2: pd.Series,
+        prev_s1: pd.Series,
+        prev_s2: pd.Series,
+        upper_bound: pd.Series | None = None,
+        lower_bound: pd.Series | None = None,
+        upper_standard: pd.Series | None = None,
+        lower_standard: pd.Series | None = None,
+        name: str = "cross_type",
+    ) -> pd.DataFrame:
+        ub = s1 if upper_bound is None else upper_bound
+        lb = s2 if lower_bound is None else lower_bound
+        us = s2 if upper_standard is None else upper_standard
+        ls = s1 if lower_standard is None else lower_standard
+        golden = (prev_s1 <= prev_s2) & (ub >= us)
+        death = (prev_s1 >= prev_s2) & (lb <= ls)
+        result = golden.astype(int) - death.astype(int)
+        result[golden & death] = 2
+        return _masked(result, s1, s2, prev_s1, prev_s2, ub, lb, us, ls).to_frame(name)
 
-        # get the standard that's needed to cross
-        upper_standard = upper_standard if upper_standard is not None else s2
-        lower_standard = lower_standard if lower_standard is not None else s1
-        
-        # the drift within one kline if needed 
-        upper_bound = upper_bound if upper_bound is not None else s1
-        lower_bound = lower_bound if lower_bound is not None else s2
-
-        # bool series of if cross
-        golden_cross = (prev_s1 <= prev_s2) & (upper_bound >= upper_standard)
-        death_cross = (prev_s1 > prev_s2) & (lower_bound <= lower_standard)
-
-        # merge golden and death 
-        # golden 1, death -1, both/no_cross 0
-        res = golden_cross.astype("int8") - death_cross.astype("int8")
-
-        # overwrite both as 2
-        res.loc[golden_cross & death_cross] = 2
-
-        # fill the first na caused by shift and return 
-        return res.fillna(0).astype(int).to_frame(name)
-    
     @classmethod
-    @log_lifecycle(logger)
     def stream_endpoint(
         cls,
-        cur_s1:float, cur_s2:float,
-        prev_s1:float, prev_s2:float,
-        cur_upper_bound:Optional[float],
-        cur_upper_standard:Optional[float],
-        cur_lower_bound:Optional[float],
-        cur_lower_standard:Optional[float],
-        name:str
-    )->dict[str, int]:
-        upper_standard = cur_upper_standard if cur_upper_standard is not None else cur_s2
-        lower_standard = cur_lower_standard if cur_lower_standard is not None else cur_s1
-        upper_bound = cur_upper_bound if cur_upper_bound is not None else cur_s1
-        lower_bound = cur_lower_bound if cur_lower_bound is not None else cur_s2
+        cur_s1: float,
+        cur_s2: float,
+        prev_s1: float,
+        prev_s2: float,
+        cur_upper_bound: float | None = None,
+        cur_upper_standard: float | None = None,
+        cur_lower_bound: float | None = None,
+        cur_lower_standard: float | None = None,
+        name: str = "cross_type",
+    ) -> dict[str, float]:
+        ub = cur_s1 if cur_upper_bound is None else cur_upper_bound
+        lb = cur_s2 if cur_lower_bound is None else cur_lower_bound
+        us = cur_s2 if cur_upper_standard is None else cur_upper_standard
+        ls = cur_s1 if cur_lower_standard is None else cur_lower_standard
+        if any(math.isnan(v) for v in (cur_s1, cur_s2, prev_s1, prev_s2, ub, lb, us, ls)):
+            return {name: math.nan}
+        golden = prev_s1 <= prev_s2 and ub >= us
+        death = prev_s1 >= prev_s2 and lb <= ls
+        return {name: 2 if golden and death else int(golden) - int(death)}
 
-        golden_cross = (prev_s1 <= prev_s2) and (upper_bound >= upper_standard)
-        death_cross = (prev_s1 >= prev_s2) and (lower_bound <= lower_standard)
-
-        res = 0
-        res = 1 if golden_cross else res
-        res = -1 if death_cross else res
-        res = 2 if golden_cross and death_cross else res
-
-        return {name:res}
-
-    @classmethod
-    @log_lifecycle(logger)
-    def stream_handler(
-        cls,
-        s1:pd.Series, 
-        s2:pd.Series, 
-        prev_s1:pd.Series,
-        prev_s2:pd.Series,
-        upper_bound:Optional[pd.Series], 
-        lower_bound:Optional[pd.Series], 
-        upper_standard:Optional[pd.Series],
-        lower_standard:Optional[pd.Series],
-        name:str,
-        prev_df:pd.DataFrame,
-        cur_row:dict[str, int|float]
-    )->dict[str, float]:
-        kwargs = {
-            "cur_s1":cur_row[s1.name],
-            "cur_s2":cur_row[s2.name],
-            "prev_s1":prev_s1.iloc[-1],
-            "prev_s2":prev_s2.iloc[-1],
-            "cur_upper_bound":None if upper_bound is None else cur_row[upper_bound.name],
-            "cur_upper_standard":None if upper_standard is None else cur_row[upper_standard.name],
-            "cur_lower_bound":None if lower_bound is None else cur_row[lower_bound.name],
-            "cur_lower_standard":None if lower_standard is None else cur_row[lower_standard.name],
-            "name":name
-        }
-        return __class__.stream_endpoint(**kwargs)
 
 class CrossVal(BaseIndicator):
+    name = "cross_val"
+
     @classmethod
-    @log_lifecycle(logger)
     def vector_endpoint(
         cls,
-        s1:pd.Series,
-        s2:pd.Series,
-        base_series:pd.Series,
-        cross_type:pd.Series,
-        upper_bound:Optional[pd.Series], 
-        lower_bound:Optional[pd.Series], 
-        upper_standard:Optional[pd.Series],
-        lower_standard:Optional[pd.Series],
-        name:str
-    )->pd.DataFrame:
-        # upper standard usually the same as the lower standard
-        upper_standard = upper_standard if upper_standard is not None else s2
-        lower_standard = lower_standard if lower_standard is not None else s1
-        upper_bound = upper_bound if upper_bound is not None else s1
-        lower_bound = lower_bound if lower_bound is not None else s2
-
-        # NOTE: for sma the base series usually is open price
-        # when crossed violently it could happen that the whole kline price range is above the standard,
-        # use the base series when it happen and use the standard when normal
-        golden_price = np.where(lower_bound > upper_standard, base_series, upper_standard)
-        death_price = np.where(upper_bound < lower_standard, base_series, lower_standard)
-
-        # NOTE: when cross_type == 2 there's at least two cross in one kline
-        # we simply ignore that valuees for now
-        conditions = [
-            (cross_type == 1),
-            (cross_type == -1)
-        ]
-        choices = [golden_price, death_price]
-        res = pd.Series(np.select(conditions, choices, default=0))
-        return res.to_frame(name)
+        s1: pd.Series,
+        s2: pd.Series,
+        base_series: pd.Series,
+        cross_type: pd.Series,
+        upper_bound: pd.Series | None = None,
+        lower_bound: pd.Series | None = None,
+        upper_standard: pd.Series | None = None,
+        lower_standard: pd.Series | None = None,
+        name: str = "cross_val",
+    ) -> pd.DataFrame:
+        ub = s1 if upper_bound is None else upper_bound
+        lb = s2 if lower_bound is None else lower_bound
+        us = s2 if upper_standard is None else upper_standard
+        ls = s1 if lower_standard is None else lower_standard
+        golden = np.where(lb > us, base_series, us)
+        death = np.where(ub < ls, base_series, ls)
+        result = pd.Series(
+            np.select(
+                [cross_type == 1, cross_type == -1, cross_type == 2],
+                [golden, death, np.nan],
+                default=0,
+            ),
+            index=base_series.index,
+        )
+        return _masked(result, s1, s2, base_series, cross_type, ub, lb, us, ls).to_frame(name)
 
     @classmethod
-    @log_lifecycle(logger)
     def stream_endpoint(
         cls,
-        cur_s1:float,
-        cur_s2:float,
-        cur_base:float,
-        cur_cross_type:int,
-        cur_upper_bound:Optional[float],
-        cur_lower_bound:Optional[float],
-        cur_upper_standard:Optional[float],
-        cur_lower_standard:Optional[float],
-        name:str
-    )->dict[str, float]:
-        
-        cur_upper_standard = cur_upper_standard if cur_upper_standard is not None else cur_s2
-        cur_lower_standard = cur_lower_standard if cur_lower_standard is not None else cur_s1
-        cur_upper_bound = cur_upper_bound if cur_upper_bound is not None else cur_s1
-        cur_lower_bound = cur_lower_bound if cur_lower_bound is not None else cur_s2
+        cur_s1: float,
+        cur_s2: float,
+        cur_base: float,
+        cur_cross_type: float,
+        cur_upper_bound: float | None = None,
+        cur_lower_bound: float | None = None,
+        cur_upper_standard: float | None = None,
+        cur_lower_standard: float | None = None,
+        name: str = "cross_val",
+    ) -> dict[str, float]:
+        ub = cur_s1 if cur_upper_bound is None else cur_upper_bound
+        lb = cur_s2 if cur_lower_bound is None else cur_lower_bound
+        us = cur_s2 if cur_upper_standard is None else cur_upper_standard
+        ls = cur_s1 if cur_lower_standard is None else cur_lower_standard
+        if cur_cross_type == 2 or any(
+            math.isnan(v) for v in (cur_s1, cur_s2, cur_base, cur_cross_type, ub, lb, us, ls)
+        ):
+            return {name: math.nan}
+        if cur_cross_type == 1:
+            return {name: cur_base if lb > us else us}
+        if cur_cross_type == -1:
+            return {name: cur_base if ub < ls else ls}
+        return {name: 0.0}
 
-        # standard_val = (cur_upper_standard + cur_lower_standard)/2
-        golden_price = cur_base if cur_lower_bound > cur_upper_standard else cur_upper_standard
-        death_price = cur_base if cur_upper_bound < cur_lower_standard else cur_lower_standard
 
-        res = 0.0
-        res = golden_price if cur_cross_type == 1 else res
-        res = death_price if cur_cross_type == -1 else res
+def trend_direction(upper: float, lower: float, base: float, thresh: float) -> float:
+    if any(math.isnan(v) for v in (upper, lower, base)) or base == 0:
+        return math.nan
+    direction = 1 if upper >= base else 0
+    if lower < base:
+        direction = -1
+    if abs(upper - base) / abs(base) < thresh or abs(lower - base) / abs(base) < thresh:
+        direction = 0
+    return float(direction)
 
-        return {name:res}
 
-    @classmethod
-    @log_lifecycle(logger)
-    def stream_handler(
-        cls,
-        s1:pd.Series,
-        s2:pd.Series,
-        base_series:pd.Series,
-        cross_type:pd.Series,
-        upper_bound:Optional[pd.Series], 
-        lower_bound:Optional[pd.Series], 
-        upper_standard:Optional[pd.Series],
-        lower_standard:Optional[pd.Series],
-        name:str,
-        prev_df:pd.DataFrame,
-        cur_row:dict[str, int|float]
-    )->dict[str, float]:
-        kwargs = {
-            "cur_s1":cur_row[s1.name],
-            "cur_s2":cur_row[s2.name],
-            "cur_base":cur_row[base_series.name],
-            "cur_cross_type":cur_row[cross_type.name],
-            "cur_upper_bound":None if upper_bound is None else cur_row[upper_bound.name],
-            "cur_upper_standard":None if upper_standard is None else cur_row[upper_standard.name],
-            "cur_lower_bound":None if lower_bound is None else cur_row[lower_bound.name],
-            "cur_lower_standard":None if lower_standard is None else cur_row[lower_standard.name],
-            "name":name
-        }
-        return __class__.stream_endpoint(**kwargs)
-    
 class TrendType(BaseIndicator):
+    name = "trend_type"
+
     @classmethod
-    @log_lifecycle(logger)
     def vector_endpoint(
         cls,
-        prev_base_series:pd.Series,
-        upper_bound:pd.Series,
-        lower_bound:pd.Series,
-        thresh:float,
-        trend_len:int,
-        name:str
-    )->pd.DataFrame:
-        long = upper_bound >= prev_base_series
-        short = lower_bound < prev_base_series
-        flat_upper = (upper_bound - prev_base_series).abs()/prev_base_series
-        flat_lower = (lower_bound - prev_base_series).abs()/prev_base_series
-
-        trend = pd.Series(0, index=prev_base_series.index, dtype="int8")
-        trend[long] = 1
-        trend[short] = -1
-        trend[flat_upper < thresh] = 0
-        trend[flat_lower < thresh] = 0
-
-        if trend_len <= 2:
-            return trend
-        
-        rolling_sum = trend.rolling(window=trend_len-1).sum()
-        
-        conditions = [
-            (rolling_sum == trend_len-1),
-            (rolling_sum == -(trend_len-1)),
-        ]
-        choices = [1, -1]
-
-        candidate = pd.Series(np.select(conditions, choices, default=0), index=prev_base_series.index).shift(1)
-
-        res = np.where(candidate == trend, trend, 0)
-        res = pd.Series(res, index=prev_base_series.index)
-
-        return res.to_frame(name)
+        upper_bound: pd.Series,
+        lower_bound: pd.Series,
+        prev_base_series: pd.Series,
+        thresh: float,
+        trend_len: int,
+        name: str = "trend_type",
+    ) -> pd.DataFrame:
+        trend = pd.Series(0.0, index=prev_base_series.index)
+        trend[upper_bound >= prev_base_series] = 1
+        trend[lower_bound < prev_base_series] = -1
+        denominator = prev_base_series.abs().replace(0, np.nan)
+        flat = ((upper_bound - prev_base_series).abs() / denominator < thresh) | (
+            (lower_bound - prev_base_series).abs() / denominator < thresh
+        )
+        trend[flat] = 0
+        trend = _masked(trend, upper_bound, lower_bound, denominator)
+        total = trend.rolling(trend_len).sum()
+        result = pd.Series(
+            np.select([total == trend_len, total == -trend_len], [1.0, -1.0], default=0.0),
+            index=trend.index,
+        )
+        return result.where(total.notna()).to_frame(name)
 
     @classmethod
-    @log_lifecycle(logger)
     def tail(
         cls,
-        prev_base_series:pd.Series,
-        upper_bound:pd.Series,
-        lower_bound:pd.Series,
-        thresh:float,
-        trend_len:int,
-        name:str
-    )->dict[str, int]:
-        # trim everything to trend len
-        upper_bound = upper_bound.tail(trend_len)
-        lower_bound = lower_bound.tail(trend_len)
-        prev_base_series = prev_base_series.tail(trend_len)
+        prev_base_series: pd.Series,
+        upper_bound: pd.Series,
+        lower_bound: pd.Series,
+        thresh: float,
+        trend_len: int,
+        name: str = "trend_type",
+    ) -> dict[str, float]:
+        result = cls.vector_endpoint(
+            upper_bound, lower_bound, prev_base_series, thresh, trend_len, name
+        )
+        return {name: float(result[name].iloc[-1]) if len(result) else math.nan}
 
-        long = upper_bound >= prev_base_series
-        short = lower_bound < prev_base_series
-        flat_upper = (upper_bound - prev_base_series).abs()/prev_base_series
-        flat_lower = (lower_bound - prev_base_series).abs()/prev_base_series
+    stream_endpoint = tail
 
-        trend = pd.Series(0, index=prev_base_series.index, dtype="int8")
-        trend[long] = 1
-        trend[short] = -1
-        trend[flat_upper < thresh] = 0
-        trend[flat_lower < thresh] = 0
 
-        if trend_len <= 2:
-            return trend.iloc(-1),  
-
-        tail_sum = trend.tail(trend_len-1).sum()
-
-        res = 0
-        res = 1 if tail_sum == trend_len-1 else res
-        res = -1 if tail_sum == -(trend_len-1) else res
-
-        return {name:res}
-
-    @classmethod
-    @log_lifecycle(logger)
-    def stream_endpoint(
-        cls,
-        prev_base_series:pd.Series,
-        upper_bound:pd.Series,
-        lower_bound:pd.Series,
-        thresh:float,
-        trend_len:int,
-        name:str
-    )->dict[str, int]:
-        # NOTE: use tail endpoint for now 
-        # TODO: write O(1) implementation
-        return cls.tail(prev_base_series, upper_bound, lower_bound, thresh, trend_len, name)
-    
-    @classmethod
-    @log_lifecycle(logger)
-    def stream_handler(
-        cls,
-        prev_base_series:pd.Series,
-        upper_bound:pd.Series,
-        lower_bound:pd.Series,
-        thresh:float,
-        trend_len:int,
-        name:str,
-        prev_df:pd.DataFrame,
-        cur_row:dict[str, int|float]
-    )->dict[str, int]:
-        kwargs = {
-            "prev_base_series":prev_base_series,
-            "upper_bound":upper_bound,
-            "lower_bound":lower_bound,
-            "thresh":thresh,
-            "trend_len":trend_len,
-            "name":name
-        }
-        return __class__.stream_endpoint(**kwargs)
-    
 class TrendVal(BaseIndicator):
+    name = "trend_val"
+
     @classmethod
-    @log_lifecycle(logger)
     def vector_endpoint(
         cls,
-        base_series:pd.Series,
-        upper_bound:pd.Series,
-        lower_bound:pd.Series,
-        upper_standard:pd.Series,
-        lower_standard:pd.Series,
-        trend_type:pd.Series,
-        name:str
-    )->pd.DataFrame:
-        upper_val = np.where(lower_bound>upper_standard, base_series, upper_standard)
-        upper_val = np.where(upper_bound<upper_standard, 0, upper_val)
+        base_series: pd.Series,
+        upper_bound: pd.Series,
+        lower_bound: pd.Series,
+        upper_standard: pd.Series,
+        lower_standard: pd.Series,
+        trend_type: pd.Series,
+        name: str = "trend_val",
+    ) -> pd.DataFrame:
+        upper = np.where(lower_bound > upper_standard, base_series, upper_standard)
+        upper = np.where(upper_bound < upper_standard, 0, upper)
+        lower = np.where(upper_bound < lower_standard, base_series, lower_standard)
+        lower = np.where(lower_bound > lower_standard, 0, lower)
+        result = pd.Series(
+            np.select([trend_type == 1, trend_type == -1], [upper, lower], default=0),
+            index=base_series.index,
+        )
+        return _masked(
+            result,
+            base_series,
+            upper_bound,
+            lower_bound,
+            upper_standard,
+            lower_standard,
+            trend_type,
+        ).to_frame(name)
 
-        lower_val = np.where(upper_bound<lower_standard, base_series, lower_standard)
-        lower_val = np.where(lower_bound>lower_bound, base_series, lower_val)
-
-        conditions = [
-            (trend_type==1),
-            (trend_type==-1)
-        ]
-        choices = [upper_val, lower_val]
-        res = pd.Series(np.select(conditions, choices, default=0))
-        return res.to_frame(name)
-    
     @classmethod
-    @log_lifecycle(logger)
     def stream_endpoint(
         cls,
-        cur_upper_bound:float,
-        cur_lower_bound:float,
-        cur_upper_standard:float,
-        cur_lower_standard:float,
-        cur_trend_type:int,
-        cur_base:float,
-        name:str
-    )->dict[str, float]:
-        upper_val = cur_base if cur_lower_bound>cur_upper_standard else cur_upper_standard
-        upper_val = 0 if cur_upper_bound<cur_upper_standard else upper_val
+        cur_upper_bound: float,
+        cur_lower_bound: float,
+        cur_upper_standard: float,
+        cur_lower_standard: float,
+        cur_trend_type: float,
+        cur_base: float,
+        name: str = "trend_val",
+    ) -> dict[str, float]:
+        if any(
+            math.isnan(v)
+            for v in (
+                cur_upper_bound,
+                cur_lower_bound,
+                cur_upper_standard,
+                cur_lower_standard,
+                cur_trend_type,
+                cur_base,
+            )
+        ):
+            return {name: math.nan}
+        if cur_trend_type == 1:
+            value = cur_base if cur_lower_bound > cur_upper_standard else cur_upper_standard
+            return {name: 0.0 if cur_upper_bound < cur_upper_standard else value}
+        if cur_trend_type == -1:
+            value = cur_base if cur_upper_bound < cur_lower_standard else cur_lower_standard
+            return {name: 0.0 if cur_lower_bound > cur_lower_standard else value}
+        return {name: 0.0}
 
-        lower_val = cur_base if cur_upper_bound<cur_lower_standard else cur_lower_standard
-        lower_val = 0 if cur_lower_bound>cur_lower_standard else lower_val
 
-        res = 0
-        res = upper_val if cur_trend_type == 1 else res
-        res = lower_val if cur_trend_type == -1 else res
-
-        return {name:res} 
-    
-    @classmethod
-    @log_lifecycle(logger)
-    def stream_handler(
-        cls,
-        base_series:pd.Series,
-        upper_bound:pd.Series,
-        lower_bound:pd.Series,
-        upper_standard:pd.Series,
-        lower_standard:pd.Series,
-        trend_type:pd.Series,
-        name:str,
-        prev_df:pd.DataFrame,
-        cur_row:dict[str, int|float]
-    )->dict[str, float]:
-        kwargs = {
-            "cur_upper_bound":cur_row[upper_bound.name],
-            "cur_upper_standard":cur_row[upper_standard.name],
-            "cur_lower_bound":cur_row[lower_bound.name],
-            "cur_lower_standard":cur_row[lower_standard.name],
-            "cur_trend_type":cur_row[trend_type.name],
-            "cur_base":cur_row[base_series.name],
-            "name":name
-        }
-        return __class__.stream_endpoint(**kwargs)
-    
 class WindowMax(BaseIndicator):
+    name = "win_max"
+
     @classmethod
-    @log_lifecycle(logger)
     def vector_endpoint(
-        cls, 
-        base_series:pd.Series, 
-        window:int, 
-        name:str
-    )->pd.DataFrame:
+        cls, base_series: pd.Series, window: int, name: str = "win_max"
+    ) -> pd.DataFrame:
         return base_series.rolling(window).max().to_frame(name)
-        
-    @classmethod
-    @log_lifecycle(logger)
-    def tail(
-        cls, 
-        base_series:pd.Series, 
-        window:int, 
-        name:str
-    )->dict[str, float]:
-        return {name:base_series.tail(window).max()}
 
     @classmethod
-    @log_lifecycle(logger)
-    def stream_endpoint(
-        cls, 
-        base_series:pd.Series, 
-        window:int, 
-        name:str
-    )->dict[str, float]:
-        # NOTE: use tail endpoint for now 
-        # TODO: write O(1) implementation
-        return cls.tail(base_series, window, name)
-        
-    @classmethod
-    @log_lifecycle(logger)
-    def stream_handler(
-        cls, 
-        base_series:pd.Series, 
-        window:int, 
-        name:str,
-        prev_df:pd.DataFrame,
-        cur_row:dict[str, int|float]
-    )->dict[str, float]:
-        kwargs = {
-            "base_series":base_series,
-            "window":window,
-            "name":name
+    def tail(cls, base_series: pd.Series, window: int, name: str = "win_max") -> dict[str, float]:
+        return {
+            name: float(base_series.rolling(window).max().iloc[-1])
+            if len(base_series)
+            else math.nan
         }
-        return __class__.stream_endpoint(**kwargs)
-    
+
+    stream_endpoint = tail
+
+
 class WindowMin(BaseIndicator):
-    @classmethod
-    @log_lifecycle(logger)
-    def vector_endpoint(
-        cls, 
-        base_series:pd.Series, 
-        window:int, 
-        name:str
-    )->pd.DataFrame:
-        return base_series.rolling(window).min().to_frame(name)
-    
-    @classmethod
-    @log_lifecycle(logger)
-    def tail(
-        cls, 
-        base_series:pd.Series, 
-        window:int, 
-        name:str
-    )->dict[str, float]:
-        return {name:base_series.tail(window).min()}
-    
-    @classmethod
-    @log_lifecycle(logger)
-    def stream_endpoint(
-        cls, 
-        base_series:pd.Series, 
-        window:int, 
-        name:str
-    )->dict[str, float]:
-        # NOTE: use tail endpoint for now 
-        # TODO: write O(1) implementation
-        return cls.tail(base_series, window, name)
+    name = "win_min"
 
     @classmethod
-    @log_lifecycle(logger)
-    def stream_handler(
-        cls, 
-        base_series:pd.Series, 
-        window:int, 
-        name:str,
-        prev_df:pd.DataFrame,
-        cur_row:dict[str, int|float]
-    )->dict[str, float]:
-        kwargs = {
-            "base_series":base_series,
-            "window":window,
-            "name":name
-        }
-        return __class__.stream_endpoint(**kwargs)
-    
-class Shift(BaseIndicator):
-    @classmethod
-    @log_lifecycle(logger)
     def vector_endpoint(
-        cls, 
-        base_series:pd.Series, 
-        period:int, 
-        name:str
-    )->pd.DataFrame:
-        return base_series.shift(period).to_frame(name)
-    
+        cls, base_series: pd.Series, window: int, name: str = "win_min"
+    ) -> pd.DataFrame:
+        return base_series.rolling(window).min().to_frame(name)
+
     @classmethod
-    @log_lifecycle(logger)
-    def tail(
-        cls, 
-        base_series:pd.Series, 
-        period:int, 
-        name:str
-    )->dict[str, float]:
-        return {name:base_series.iloc[-(period+1)]}
-    
-    @classmethod
-    @log_lifecycle(logger)
-    def stream_endpoint(
-        cls, 
-        base_series:pd.Series, 
-        period:int, 
-        name:str
-    )->dict[str, float]:
-        return cls.tail(base_series, period, name)
-    
-    @classmethod
-    @log_lifecycle(logger)
-    def stream_handler(
-        cls, 
-        base_series:pd.Series, 
-        period:int, 
-        name:str,
-        prev_df:pd.DataFrame,
-        cur_row:dict[str, int|float]
-    )->dict[str, float]:
-        kwargs = {
-            "base_series":base_series,
-            "period":period,
-            "name":name
+    def tail(cls, base_series: pd.Series, window: int, name: str = "win_min") -> dict[str, float]:
+        return {
+            name: float(base_series.rolling(window).min().iloc[-1])
+            if len(base_series)
+            else math.nan
         }
-        return __class__.stream_endpoint(**kwargs)
+
+    stream_endpoint = tail
+
+
+class Shift(BaseIndicator):
+    name = "shift"
+
+    @classmethod
+    def vector_endpoint(
+        cls, base_series: pd.Series, period: int, name: str = "shift"
+    ) -> pd.DataFrame:
+        return base_series.shift(period).to_frame(name)
+
+    @classmethod
+    def tail(cls, base_series: pd.Series, period: int, name: str = "shift") -> dict[str, float]:
+        return {
+            name: float(base_series.iloc[-period - 1]) if len(base_series) > period else math.nan
+        }
+
+    stream_endpoint = tail
+
 
 class RelativePosition(BaseIndicator):
+    name = "relative_pos"
+
     @classmethod
-    @log_lifecycle(logger)
     def vector_endpoint(
-        cls, 
-        s1:pd.Series, 
-        s2:pd.Series, 
-        name:str
-    )->pd.DataFrame:
+        cls, s1: pd.Series, s2: pd.Series, name: str = "relative_pos"
+    ) -> pd.DataFrame:
         result = (s1 > s2).astype("int8") - (s1 < s2).astype("int8")
-        return result.to_frame(name)
-    
+        return _masked(result, s1, s2).to_frame(name)
+
     @classmethod
-    @log_lifecycle(logger)
     def stream_endpoint(
-        cls, 
-        cur_s1:float, 
-        cur_s2:float, 
-        name:str
-    )->dict[str, int]:
-        res = 0
-        res = 1 if cur_s1 > cur_s2 else res
-        res = -1 if cur_s1 < cur_s2 else res
-        return {name:res}
-    
-    @classmethod
-    @log_lifecycle(logger)
-    def stream_handler(
-        cls, 
-        s1:pd.Series, 
-        s2:pd.Series, 
-        name:str,
-        prev_df:pd.DataFrame,
-        cur_row:dict[str, int|float]
-    )->dict[str, int]:
-        kwargs = {
-            "cur_s1":cur_row[s1.name],
-            "cur_s2":cur_row[s2.name],
-            "name":name
-        }
-        return __class__.stream_endpoint(**kwargs)
+        cls, cur_s1: float, cur_s2: float, name: str = "relative_pos"
+    ) -> dict[str, float]:
+        if math.isnan(cur_s1) or math.isnan(cur_s2):
+            return {name: math.nan}
+        return {name: int(cur_s1 > cur_s2) - int(cur_s1 < cur_s2)}
