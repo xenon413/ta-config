@@ -7,11 +7,13 @@ from typing import cast
 
 from . import schema as cfg
 from .indicators.base_indicator import BaseIndicator
+from .indicators.rsi import RSIAccumulator
 from .state import (
     EMAState,
     IndicatorState,
     MACDState,
     RollingState,
+    RSIState,
     ScalarState,
     ShiftState,
     TrendState,
@@ -45,6 +47,9 @@ def make_spec[C: cfg.BaseConfig](
 REGISTRY: Mapping[str, IndicatorSpec] = MappingProxyType(
     {
         "sma_calc": make_spec(cfg.SMACalcConfig, lambda n, c: RollingState(n, c.window, "sma")),
+        "rsi_calc": make_spec(
+            cfg.RSICalcConfig, lambda n, c: RSIState(n, RSIAccumulator(c.window))
+        ),
         "ema_calc": make_spec(
             cfg.EMACalcConfig,
             lambda n, c: EMAState(n, c.window, 2 if c.smoothing is None else c.smoothing),

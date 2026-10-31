@@ -13,10 +13,10 @@ Build and install an immutable wheel from a reviewed commit:
 ```sh
 python -m pip install build
 python -m build
-python -m pip install dist/ta_config-0.2.0-py3-none-any.whl
+python -m pip install dist/ta_config-0.2.1-py3-none-any.whl
 ```
 
-Version 0.2.0 is the version in this source tree; these instructions do not imply
+Version 0.2.1 is the version in this source tree; these instructions do not imply
 that a release tag has already been published. Record the wheel SHA-256 for deployment.
 After publishing, use a fixed release tag or commit rather than a mutable branch.
 
@@ -104,6 +104,7 @@ passing both spellings is an error. IndexConfig is a data model, not an executor
 | SMACalc | Arithmetic mean of the last window samples, including current. Scalar prev_base is the outgoing x[t-window]. |
 | EMACalc | alpha*x + (1-alpha)*previous EMA, seeded from first valid x. |
 | MACDCalc | fast EMA - slow EMA; outputs name, name_signal, name_hist. |
+| RSICalc | Wilder RSI: simple-average seed over window price changes, followed by smoothing with alpha=1/window. Needs window+1 prices. No losses gives 100, no gains gives 0, and a flat seed gives 50. Missing samples reset warm-up. |
 | SMA2SMACrossStandard | base + w1*w2*(sma2-sma1)/(w2-w1). Equal windows return base in the same output shape. |
 | SMATrendMaintVal | base + window*(mapped prev_sma - sma). The mapped value is read at the current bar. |
 | SMAadjust | base + (adjustment-base)/window. |
@@ -148,7 +149,7 @@ python -m pytest --cov=ta_config --cov-report=term-missing
 python -m ruff check .
 python -m mypy
 python -m build
-python scripts/wheel_smoke.py dist/ta_config-0.2.0-py3-none-any.whl
+python scripts/wheel_smoke.py dist/ta_config-0.2.1-py3-none-any.whl
 python -m pip_audit
 python scripts/benchmark.py
 ```

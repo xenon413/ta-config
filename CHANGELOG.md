@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1 — unreleased
+
+- Add `rsi_calc`, `RSICalc`, and `RSICalcConfig` with Wilder smoothing, a simple-average
+  seed, and constant-size streaming state supporting repeated current-candle updates.
+- Define flat RSI as 50 and reset RSI warm-up after missing samples.
+- Extend the public registry reference and configuration JSON schema for RSI.
+
 ## 0.2.0 — unreleased
 
 - Correct current-bar streaming, SMA outgoing observations, shifted references, trend

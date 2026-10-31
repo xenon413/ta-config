@@ -35,7 +35,7 @@ def main():
             encoding="utf-8",
         )
         run("-m", "build")
-        run("scripts/wheel_smoke.py", "dist/ta_config-0.2.0-py3-none-any.whl")
+        run("scripts/wheel_smoke.py", "dist/ta_config-0.2.1-py3-none-any.whl")
         run("-m", "pip_audit")
         run("scripts/benchmark.py")
 

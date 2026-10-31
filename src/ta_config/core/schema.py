@@ -85,6 +85,13 @@ class MACDCalcConfig(BaseConfig):
     signal: Window
 
 
+class RSICalcConfig(BaseConfig):
+    indicator_class = ind.RSICalc
+    input_fields = ("base_series",)
+    base_series: Identifier = Field(alias="base")
+    window: Window
+
+
 class CrossTypeConfig(BaseConfig):
     indicator_class = ind.CrossType
     input_fields = (
@@ -192,6 +199,7 @@ class IndexConfig(BaseModel):
     sma_adjust: Mapping[Identifier, SMAAdjustConfig] | None = None
     ema_calc: Mapping[Identifier, EMACalcConfig] | None = None
     macd_calc: Mapping[Identifier, MACDCalcConfig] | None = None
+    rsi_calc: Mapping[Identifier, RSICalcConfig] | None = None
     sma2sma_cross_standard: Mapping[Identifier, SMA2SMACrossStandardConfig] | None = None
     cross_type: Mapping[Identifier, CrossTypeConfig] | None = None
     cross_val: Mapping[Identifier, CrossValConfig] | None = None

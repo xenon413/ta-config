@@ -23,7 +23,7 @@ jobs:
       - run: python scripts/generate_reference.py --check
       - run: python -m pytest --cov=ta_config --cov-report=term-missing
       - run: python -m build
-      - run: python scripts/wheel_smoke.py dist/ta_config-0.2.0-py3-none-any.whl
+      - run: python scripts/wheel_smoke.py dist/ta_config-0.2.1-py3-none-any.whl
       - run: python -m pip_audit
       - uses: actions/upload-artifact@v4
         with:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ta-config"
-version = "0.2.0"
+version = "0.2.1"
 description = "Declarative technical indicators with validated plans and bounded streaming state."
 readme = "README.md"
 license = "MIT"

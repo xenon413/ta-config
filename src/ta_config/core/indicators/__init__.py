@@ -12,6 +12,7 @@ from .relation import (
     WindowMax,
     WindowMin,
 )
+from .rsi import RSICalc
 from .sma import SMA2SMACrossStandard, SMAadjust, SMACalc, SMATrendMaintVal
 
 __all__ = [
@@ -21,6 +22,7 @@ __all__ = [
     "SMAadjust",
     "EMACalc",
     "MACDCalc",
+    "RSICalc",
     "CrossType",
     "CrossVal",
     "TrendType",

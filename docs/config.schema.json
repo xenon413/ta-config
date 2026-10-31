@@ -252,6 +252,29 @@
       "title": "MACDCalcConfig",
       "type": "object"
     },
+    "RSICalcConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "title": "Base",
+          "type": "string"
+        },
+        "window": {
+          "exclusiveMinimum": 0,
+          "maximum": 100000,
+          "title": "Window",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "window"
+      ],
+      "title": "RSICalcConfig",
+      "type": "object"
+    },
     "RelativePositionConfig": {
       "additionalProperties": false,
       "properties": {
@@ -674,6 +697,26 @@
       ],
       "default": null,
       "title": "Macd Calc"
+    },
+    "rsi_calc": {
+      "anyOf": [
+        {
+          "patternProperties": {
+            "^\\S(?:.*\\S)?$": {
+              "$ref": "#/$defs/RSICalcConfig"
+            }
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rsi Calc"
     },
     "sma2sma_cross_standard": {
       "anyOf": [

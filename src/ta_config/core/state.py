@@ -9,6 +9,7 @@ from typing import Protocol, cast
 from . import indicators as ind
 from .indicators.base_indicator import BaseIndicator
 from .indicators.relation import trend_direction
+from .indicators.rsi import RSIAccumulator
 
 NAN = float("nan")
 
@@ -74,6 +75,15 @@ class EMAState:
             self.accumulator, value, self.window, self.smoothing, self.name
         )[self.name]
         return {self.name: self.accumulator}
+
+
+@dataclass
+class RSIState:
+    name: str
+    accumulator: RSIAccumulator
+
+    def feed(self, inputs: Mapping[str, float]) -> dict[str, float]:
+        return {self.name: self.accumulator.feed(inputs["base_series"])}
 
 
 @dataclass
